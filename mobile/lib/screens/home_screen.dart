@@ -3,6 +3,8 @@ import 'package:nisk_app/screens/education/education_dashboard.dart';
 import 'package:nisk_app/screens/manpower/manpower_dashboard.dart';
 import 'package:nisk_app/screens/cleaning/cleaning_dashboard.dart';
 import 'package:nisk_app/screens/products/products_dashboard.dart';
+import 'package:nisk_app/screens/admin/admin_dashboard.dart';
+import 'package:nisk_app/screens/messages/messages_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -13,6 +15,12 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('NISK App', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.message), 
+            onPressed: () { 
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MessagesScreen())); 
+            }
+          ),
           IconButton(icon: const Icon(Icons.notifications), onPressed: () {}),
         ],
       ),
@@ -28,6 +36,8 @@ class HomeScreen extends StatelessWidget {
               _buildCategoryCard(context, 'Manpower', 'Find Jobs, Hire Talent.', Colors.orange, Icons.work),
               _buildCategoryCard(context, 'Production & Sales', 'Buy, Sell, Expand.', Colors.green, Icons.shopping_cart),
               _buildCategoryCard(context, 'Cleaning Services', 'Professional cleaning solutions.', Colors.blue, Icons.cleaning_services),
+              const SizedBox(height: 24),
+              _buildCategoryCard(context, 'Admin Console', 'Manage platform activities.', Colors.black87, Icons.admin_panel_settings),
             ],
           ),
         ),
@@ -67,6 +77,8 @@ class HomeScreen extends StatelessWidget {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const CleaningDashboard()));
           } else if (title == 'Production & Sales') {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const ProductsDashboard()));
+          } else if (title == 'Admin Console') {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
           }
         },
       ),

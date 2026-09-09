@@ -15,6 +15,9 @@ const teacherRoutes = require('./routes/teacher');
 const manpowerRoutes = require('./routes/manpower');
 const cleaningRoutes = require('./routes/cleaning');
 const productsRoutes = require('./routes/products');
+const messagingRoutes = require('./routes/messaging');
+const notificationRoutes = require('./routes/notifications');
+const adminRoutes = require('./routes/admin');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
@@ -23,6 +26,9 @@ app.use('/api/teacher', teacherRoutes);
 app.use('/api/manpower', manpowerRoutes);
 app.use('/api/cleaning', cleaningRoutes);
 app.use('/api/products', productsRoutes);
+app.use('/api/messages', messagingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Platform API is running' });
