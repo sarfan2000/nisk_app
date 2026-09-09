@@ -5,9 +5,11 @@ const Booking = require('../models/Booking');
 const Job = require('../models/Job');
 const Product = require('../models/Product');
 const ProductOrder = require('../models/ProductOrder');
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 // Get total overview statistics
-router.get('/dashboard-stats', async (req, res) => {
+router.get('/dashboard-stats', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const usersCount = await User.countDocuments();
         const activeBookings = await Booking.countDocuments({ status: 'Pending' });
@@ -31,7 +33,7 @@ router.get('/dashboard-stats', async (req, res) => {
 });
 
 // User Management Actions
-router.patch('/users/:id/status', async (req, res) => {
+router.patch('/users/:id/status', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const { status, isVerified } = req.body;
         const user = await User.findByIdAndUpdate(req.params.id, { status, isVerified }, { new: true });
@@ -42,7 +44,7 @@ router.patch('/users/:id/status', async (req, res) => {
 });
 
 // Product Approvals
-router.patch('/products/:id/approve', async (req, res) => {
+router.patch('/products/:id/approve', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const product = await Product.findByIdAndUpdate(req.params.id, { isApproved: true }, { new: true });
         res.json({ msg: 'Product Approved for Marketplace', product });
