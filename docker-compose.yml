@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  nisk-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nisk-backend-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGO_URI=mongodb://nisk-mongo:27017/nisk_app
+      - JWT_SECRET=super_secret_nisk_production_key_2026
+    depends_on:
+      - nisk-mongo
+    networks:
+      - nisk-network
+
+  nisk-mongo:
+    image: mongo:6.0
+    container_name: nisk-mongodb-cluster
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - nisk-mongo-data:/data/db
+    networks:
+      - nisk-network
+
+volumes:
+  nisk-mongo-data:
+
+networks:
+  nisk-network:
+    driver: bridge
