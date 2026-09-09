@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nisk_app/screens/education/education_dashboard.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -20,10 +21,10 @@ class HomeScreen extends StatelessWidget {
             children: [
               const Text('What do you need?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              _buildCategoryCard('Education', 'Learn, Teach, Grow.', Colors.redAccent, Icons.school),
-              _buildCategoryCard('Manpower', 'Find Jobs, Hire Talent.', Colors.orange, Icons.work),
-              _buildCategoryCard('Production & Sales', 'Buy, Sell, Expand.', Colors.green, Icons.shopping_cart),
-              _buildCategoryCard('Cleaning Services', 'Professional cleaning solutions.', Colors.blue, Icons.cleaning_services),
+              _buildCategoryCard(context, 'Education', 'Learn, Teach, Grow.', Colors.redAccent, Icons.school),
+              _buildCategoryCard(context, 'Manpower', 'Find Jobs, Hire Talent.', Colors.orange, Icons.work),
+              _buildCategoryCard(context, 'Production & Sales', 'Buy, Sell, Expand.', Colors.green, Icons.shopping_cart),
+              _buildCategoryCard(context, 'Cleaning Services', 'Professional cleaning solutions.', Colors.blue, Icons.cleaning_services),
             ],
           ),
         ),
@@ -40,7 +41,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryCard(String title, String subtitle, Color color, IconData icon) {
+  Widget _buildCategoryCard(BuildContext context, String title, String subtitle, Color color, IconData icon) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -55,7 +56,9 @@ class HomeScreen extends StatelessWidget {
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.arrow_forward_ios),
         onTap: () {
-          // Navigate to specific module
+          if (title == 'Education') {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const EducationDashboard()));
+          }
         },
       ),
     );
