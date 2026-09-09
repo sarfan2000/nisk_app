@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nisk_app/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,10 +11,26 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
-  void _login() {
-    // Navigate to Home for demo
-    Navigator.pushReplacementNamed(context, '/home');
+  void _login() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await _authService.login(
+        _phoneController.text.trim(),
+        _passwordController.text.trim(),
+      );
+      if (user != null) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -59,13 +76,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: true,
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _login,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text('LOGIN'),
-              ),
+              _isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : ElevatedButton(
+                    onPressed: _login,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: const Color(0xFF1B3B6F),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('LOGIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
             ],
           ),
         ),
