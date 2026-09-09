@@ -3,6 +3,8 @@ const router = express.Router();
 const Job = require('../models/Job');
 const WorkerProfile = require('../models/WorkerProfile');
 const JobApplication = require('../models/JobApplication');
+const upload = require('../middleware/upload');
+const auth = require('../middleware/auth');
 
 // 1. Post a Job (Employer)
 router.post('/jobs', async (req, res) => {
@@ -33,21 +35,25 @@ router.get('/jobs', async (req, res) => {
 });
 
 // 3. Apply for Job (Worker)
-router.post('/apply', async (req, res) => {
+router.post('/apply/:jobId', [auth, upload.single('cv')], async (req, res) => {
     try {
-        const { jobId, workerId, employerId } = req.body;
+        const { coverLetter, expectedSalary } = req.body;
 
-        const existing = await JobApplication.findOne({ job: jobId, worker: workerId });
-        if (existing) return res.status(400).json({ msg: 'Already applied' });
+        let cvUrl = '';
+        if (req.file) {
+            cvUrl = req.file.path;
+        }
 
-        const app = new JobApplication({
-            job: jobId,
-            worker: workerId,
-            employer: employerId
+        const application = new JobApplication({
+            job: req.params.jobId,
+            worker: req.user.id,
+            coverLetter,
+            expectedSalary,
+            cvUrl
         });
-        await app.save();
 
-        res.status(201).json({ msg: 'Application submitted', application: app });
+        await application.save();
+        res.status(201).json({ msg: 'Application submitted successfully', application });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }

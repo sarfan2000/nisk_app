@@ -2,13 +2,25 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const ProductOrder = require('../models/ProductOrder');
+const upload = require('../middleware/upload');
+const auth = require('../middleware/auth');
 
 // 1. Create Product (Seller / Production Provider)
-router.post('/', async (req, res) => {
+router.post('/', [auth, upload.array('images', 5)], async (req, res) => {
     try {
-        const product = new Product(req.body);
-        // Ensure Admin approval flag is false explicitly
-        product.isApproved = false;
+        const productData = req.body;
+
+        // Map Cloudinary secure URLs securely if files exist
+        if (req.files && req.files.length > 0) {
+            productData.images = req.files.map(file => file.path);
+        }
+
+        const product = new Product({
+            ...productData,
+            seller: req.user.id, // Enforced by auth
+            isApproved: false
+        });
+
         await product.save();
         res.status(201).json({ msg: 'Product listed successfully pending approval', product });
     } catch (err) {
