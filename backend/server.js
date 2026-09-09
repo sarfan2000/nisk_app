@@ -2,10 +2,31 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Set Security HTTP headers
+app.use(helmet());
+
+// Prevent NoSQL Injection
+app.use(mongoSanitize());
+
+// Prevent XSS attacks
+app.use(xss());
+
+// Rate Limiting (Limit each IP to 100 requests per 15 minutes)
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 mins
+    max: 100,
+    message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use('/api/', limiter);
 
 // Load routes
 const authRoutes = require('./routes/auth');
