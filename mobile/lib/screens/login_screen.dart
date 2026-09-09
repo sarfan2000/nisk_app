@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nisk_app/services/auth_service.dart';
+import 'package:nisk_app/screens/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,13 +48,17 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text(
                 'NISK App',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B3B6F), // Brand Blue
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
                 'CONNECT • EMPOWER • GROW',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(fontSize: 12, letterSpacing: 1.2),
               ),
               const SizedBox(height: 48),
               TextField(
@@ -87,6 +92,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: const Text('LOGIN', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
+              const SizedBox(height: 16),
+              Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Don't have an account? "),
+                    GestureDetector(
+                      onTap: () {
+                         Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
+                      },
+                      child: const Text(
+                        'Register',
+                        style: TextStyle(color: Color(0xFF1B3B6F), fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+              )
             ],
           ),
         ),
