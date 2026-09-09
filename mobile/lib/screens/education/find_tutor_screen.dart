@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nisk_app/screens/education/checkout_screen.dart';
 
 class FindTutorScreen extends StatefulWidget {
   const FindTutorScreen({super.key});
@@ -146,9 +147,18 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
         actions: [
           ElevatedButton(
             onPressed: () {
-               // DB Submit Logic -> Checkout Screen
                Navigator.pop(context);
-               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proceeding to Payment...')));
+               Navigator.push(context, MaterialPageRoute(builder: (context) => EducationCheckoutScreen(
+                 bookingDetails: {
+                   'mode': _selectedMode,
+                   'grade': _selectedGrade,
+                   'subject': _selectedSubject,
+                   'teacher': _selectedTeacher,
+                   'classes': _numberOfClasses,
+                   'rate': rate,
+                   'subtotal': subtotal
+                 }
+               )));
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
             child: const Text('PROCEED TO PAYMENT'),
