@@ -18,6 +18,7 @@ const productsRoutes = require('./routes/products');
 const messagingRoutes = require('./routes/messaging');
 const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
+const operationsRoutes = require('./routes/operations');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
@@ -29,6 +30,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/messages', messagingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/operations', operationsRoutes);
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Platform API is running' });
