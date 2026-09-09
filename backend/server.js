@@ -11,10 +11,14 @@ app.use(express.json());
 const authRoutes = require('./routes/auth');
 const servicesRoutes = require('./routes/services');
 const educationRoutes = require('./routes/education');
+const teacherRoutes = require('./routes/teacher');
+const manpowerRoutes = require('./routes/manpower');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/education', educationRoutes);
+app.use('/api/teacher', teacherRoutes);
+app.use('/api/manpower', manpowerRoutes);
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Platform API is running' });

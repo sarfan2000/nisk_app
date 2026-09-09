@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/education_dashboard.dart';
+import 'package:nisk_app/screens/manpower/manpower_dashboard.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -58,6 +59,8 @@ class HomeScreen extends StatelessWidget {
         onTap: () {
           if (title == 'Education') {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const EducationDashboard()));
+          } else if (title == 'Manpower') {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const ManpowerDashboard()));
           }
         },
       ),
