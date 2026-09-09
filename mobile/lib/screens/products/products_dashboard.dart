@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nisk_app/screens/products/add_product_screen.dart';
 
 class ProductsDashboard extends StatelessWidget {
   const ProductsDashboard({super.key});
@@ -41,7 +42,9 @@ class ProductsDashboard extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AddProductScreen()));
+        },
         backgroundColor: Colors.green,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('SELL', style: TextStyle(color: Colors.white)),

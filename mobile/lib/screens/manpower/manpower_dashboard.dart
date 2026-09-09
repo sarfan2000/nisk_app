@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/manpower/find_jobs_screen.dart';
+import 'package:nisk_app/screens/manpower/employer_dashboard.dart';
 
 class ManpowerDashboard extends StatelessWidget {
   const ManpowerDashboard({super.key});
@@ -38,6 +39,9 @@ class ManpowerDashboard extends StatelessWidget {
               child: Text('EMPLOYER', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
             ),
             const SizedBox(height: 8),
+            _buildOptionCard(context, 'Employer Dashboard', Icons.business_center, () {
+               Navigator.push(context, MaterialPageRoute(builder: (context) => const EmployerDashboard()));
+            }),
             _buildOptionCard(context, 'Post a Job', Icons.post_add, () {}),
             _buildOptionCard(context, 'Find Employees', Icons.people_alt, () {}),
             _buildOptionCard(context, 'Recruitment Services', Icons.handshake, () {}),
