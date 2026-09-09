@@ -6,6 +6,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
 
 const app = express();
 app.use(cors());
@@ -54,6 +56,25 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/operations', operationsRoutes);
 app.use('/api/search', searchRoutes);
+
+// Swagger Documentation Schema
+const swaggerOptions = {
+    swaggerDefinition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'NISK Platform API',
+            description: 'Core backend documentation for the NISK multi-sector platform.',
+            version: '1.0.0',
+        },
+        servers: [
+            { url: 'http://localhost:5000' }
+        ],
+    },
+    apis: ['./routes/*.js'],
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Platform API is running' });

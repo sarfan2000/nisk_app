@@ -4,7 +4,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Register
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Creates an account and returns JWT token
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ */
+// 1. User Registration Route
 router.post('/register', async (req, res) => {
     try {
         const { name, phone, email, password, userType, location } = req.body;
@@ -30,7 +40,17 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user
+ *     description: Authenticates phone and password, returning JWT token
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
+// 2. User Login Route
 router.post('/login', async (req, res) => {
     try {
         const { phone, password } = req.body;
