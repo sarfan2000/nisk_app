@@ -10,25 +10,38 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET || 'api_secret_placeholder',
 });
 
-// Create dynamic storage engine for CVs and Images
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-        let folderName = 'nisk_assets';
-        if (file.mimetype === 'application/pdf') {
-            folderName = 'nisk_cvs';
-        } else if (file.mimetype.startsWith('image/')) {
-            folderName = 'nisk_product_images';
+let storage;
+
+if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== 'api_key_placeholder') {
+    // Create dynamic storage engine for CVs and Images
+    storage = new CloudinaryStorage({
+        cloudinary: cloudinary,
+        params: async (req, file) => {
+            let folderName = 'nisk_assets';
+            if (file.mimetype === 'application/pdf') {
+                folderName = 'nisk_cvs';
+            } else if (file.mimetype.startsWith('image/')) {
+                folderName = 'nisk_product_images';
+            }
+
+            return {
+                folder: folderName,
+                allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
+                public_id: `${Date.now()}-${file.originalname.split('.')[0]}`
+            };
+        },
+    });
+} else {
+    console.warn("Using local disk storage. Please configure CLOUDINARY_API_KEY for cloud uploads.");
+    storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, 'uploads/');
+        },
+        filename: (req, file, cb) => {
+            cb(null, `${Date.now()}-${file.originalname}`);
         }
-
-        return {
-            folder: folderName,
-            allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
-            public_id: `${Date.now()}-${file.originalname.split('.')[0]}`
-        };
-    },
-});
-
+    });
+}
 const upload = multer({ storage: storage });
 
 module.exports = upload;

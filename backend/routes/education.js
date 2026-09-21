@@ -5,6 +5,8 @@ const Subject = require('../models/Subject');
 const User = require('../models/User');
 const TeacherRate = require('../models/TeacherRate');
 const Booking = require('../models/Booking');
+const Notification = require('../models/Notification');
+const auth = require('../middleware/auth');
 
 // 1. Get all grades
 router.get('/grades', async (req, res) => {
@@ -59,9 +61,10 @@ router.get('/teacher-rate', async (req, res) => {
 });
 
 // 5. Checkout & Booking
-router.post('/book', async (req, res) => {
+router.post('/book', auth, async (req, res) => {
     try {
-        const { studentId, mode, gradeId, items, serviceCharge, discount } = req.body;
+        const { mode, gradeId, items, serviceCharge, discount } = req.body;
+        const studentId = req.user.id;
 
         let totalSubtotal = 0;
 
@@ -87,9 +90,81 @@ router.post('/book', async (req, res) => {
         });
 
         await booking.save();
+
+        // Trigger Notification to the Teacher
+        if (items && items.length > 0) {
+            for (let item of items) {
+                if (item.teacher) {
+                    const notify = new Notification({
+                        user: item.teacher,
+                        title: 'New Student Booking!',
+                        message: `A student has requested ${item.numberOfClasses} classes. Please review and approve.`,
+                        type: 'Alert'
+                    });
+                    await notify.save();
+                }
+            }
+        }
+
         res.status(201).json({ msg: 'Booking successful', booking });
     } catch (err) {
         console.error(err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 6. Get My Bookings (Student)
+router.get('/my-bookings', auth, async (req, res) => {
+    try {
+        const studentId = req.user.id;
+        // Find all bookings for this student, gracefully populate the teacher names if needed
+        const bookings = await Booking.find({ student: studentId })
+            .populate('items.teacher', 'name status isVerified')
+            .sort({ createdAt: -1 });
+
+        res.json(bookings);
+    } catch (err) {
+        console.error("GET /my-bookings error:", err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 7. Get Teacher Bookings (Teacher view)
+router.get('/teacher-bookings', auth, async (req, res) => {
+    try {
+        const teacherId = req.user.id;
+        const bookings = await Booking.find({ 'items.teacher': teacherId })
+            .populate('student', 'name email phone')
+            .sort({ createdAt: -1 });
+        res.json(bookings);
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 8. Update Booking Status (Teacher/Admin logic)
+router.patch('/bookings/:bookingId/status', auth, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const booking = await Booking.findOneAndUpdate(
+            { bookingId: req.params.bookingId },
+            { status: status },
+            { new: true }
+        );
+
+        if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+
+        // Notify Student
+        const notify = new Notification({
+            user: booking.student,
+            title: 'Booking Update',
+            message: `Your booking ${booking.bookingId} was ${status} by the teacher.`,
+            type: 'Alert'
+        });
+        await notify.save();
+
+        res.json({ msg: 'Booking status updated successfully', booking });
+    } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }
 });

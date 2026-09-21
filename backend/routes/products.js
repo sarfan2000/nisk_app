@@ -17,13 +17,29 @@ router.post('/', [auth, upload.array('images', 5)], async (req, res) => {
 
         const product = new Product({
             ...productData,
-            seller: req.user.id, // Enforced by auth
-            isApproved: false
+            seller: req.user.id // Enforced by auth
         });
 
         await product.save();
-        res.status(201).json({ msg: 'Product listed successfully pending approval', product });
+        res.status(201).json({ msg: 'Product listed successfully', product });
     } catch (err) {
+        console.error("POST /products error:", err);
+        res.status(500).json({ msg: 'Server error', error: err.message });
+    }
+});
+
+// Admin Review / Verify Product
+router.patch('/verify/:productId', async (req, res) => {
+    try {
+        const { isApproved } = req.body;
+        const product = await Product.findByIdAndUpdate(
+            req.params.productId,
+            { isApproved },
+            { new: true }
+        );
+        res.json({ msg: 'Product verification status updated', product });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
@@ -39,9 +55,10 @@ router.get('/', async (req, res) => {
 });
 
 // 3. Purchase / Create Order (Customer)
-router.post('/order', async (req, res) => {
+router.post('/order', auth, async (req, res) => {
     try {
-        const { customerId, productId, quantity, deliveryLocation, deliveryFee } = req.body;
+        const { productId, quantity, deliveryLocation, deliveryFee } = req.body;
+        const customerId = req.user.id;
 
         const product = await Product.findById(productId);
         if (!product || product.stock < quantity) {
@@ -50,8 +67,10 @@ router.post('/order', async (req, res) => {
 
         const subtotal = product.price * quantity;
         const total = subtotal + deliveryFee;
+        const orderId = 'PR' + Date.now() + Math.random().toString().slice(2, 6);
 
         const order = new ProductOrder({
+            orderId,
             customer: customerId,
             product: productId,
             quantity,
@@ -68,17 +87,51 @@ router.post('/order', async (req, res) => {
         product.stock -= quantity;
         await product.save();
 
-        res.status(201).json({ msg: 'Order placed successfully', order });
+        res.status(201).json({ msg: 'Order placed successfully', order, paymentUrl: `/api/payment/checkout/${orderId}` });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }
 });
 
 // 4. Get My Orders (Customer)
-router.get('/orders/:customerId', async (req, res) => {
+router.get('/my-orders', auth, async (req, res) => {
     try {
-        const orders = await ProductOrder.find({ customer: req.params.customerId }).populate('product');
+        const orders = await ProductOrder.find({ customer: req.user.id })
+            .populate('product')
+            .sort({ createdAt: -1 });
         res.json(orders);
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 5. Get Seller Orders (Seller)
+router.get('/seller-orders', auth, async (req, res) => {
+    try {
+        const myProducts = await Product.find({ seller: req.user.id }).select('_id');
+        const productIds = myProducts.map(p => p._id);
+
+        const orders = await ProductOrder.find({ product: { $in: productIds } })
+            .populate('product')
+            .populate('customer', 'name phone')
+            .sort({ createdAt: -1 });
+        res.json(orders);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 6. Update Order Status (Seller Approval)
+router.patch('/orders/:orderId/status', auth, async (req, res) => {
+    try {
+        const { orderStatus } = req.body;
+        const order = await ProductOrder.findOneAndUpdate(
+            { orderId: req.params.orderId },
+            { orderStatus },
+            { new: true }
+        );
+        res.json(order);
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }

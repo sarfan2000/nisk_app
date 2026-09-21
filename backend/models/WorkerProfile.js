@@ -8,6 +8,8 @@ const WorkerProfileSchema = new mongoose.Schema({
     expectedSalary: { type: String },
     availability: { type: String }, // e.g. "Immediate", "2 Weeks"
     rating: { type: Number, default: 0 },
+    profilePicture: { type: String },
+    shortDescription: { type: String },
     documents: [{ type: String }] // CV / Portfolio links
 });
 

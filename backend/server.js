@@ -12,6 +12,8 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const app = express();
 app.use(cors());
 app.use(express.json());
+const path = require('path');
+app.use('/uploads', cors(), express.static(path.join(__dirname, 'uploads'), { setHeaders: (res) => { res.set('Access-Control-Allow-Origin', '*'); } }));
 
 // Set Security HTTP headers
 app.use(helmet());
@@ -43,6 +45,7 @@ const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
 const operationsRoutes = require('./routes/operations');
 const searchRoutes = require('./routes/search');
+const paymentRoutes = require('./routes/payment');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
@@ -56,6 +59,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/operations', operationsRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Swagger Documentation Schema
 const swaggerOptions = {
@@ -67,7 +71,7 @@ const swaggerOptions = {
             version: '1.0.0',
         },
         servers: [
-            { url: 'http://localhost:5000' }
+            { url: 'http://localhost:5001' }
         ],
     },
     apis: ['./routes/*.js'],
@@ -80,16 +84,20 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'Platform API is running' });
 });
 
+// App-level error handler to prevent HTML response
+app.use((err, req, res, next) => {
+    console.error('Unhandled Error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message || err });
+});
+
 // Database connection
 const PORT = process.env.PORT || 5000;
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/nisk_app', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    console.log('MongoDB connected');
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/nisk_app')
+    .then(() => {
+        console.log('MongoDB connected');
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    }).catch(err => {
+        console.error('Database connection error:', err);
     });
-}).catch(err => {
-    console.error('Database connection error:', err);
-});

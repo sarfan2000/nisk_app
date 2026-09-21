@@ -9,10 +9,7 @@ require('dotenv').config();
 
 const seedData = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/nisk_app', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/nisk_app');
         console.log('MongoDB connected for seeding...');
 
         // Clear existing basic data

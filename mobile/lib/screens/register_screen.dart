@@ -19,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final List<String> _userTypes = ['Customer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Provider'];
   
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
   void _register() async {
     if (_nameController.text.isEmpty || _phoneController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -84,8 +85,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Secure Password', border: OutlineInputBorder(), prefixIcon: Icon(Icons.lock)),
-                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Secure Password', 
+                  border: const OutlineInputBorder(), 
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+                obscureText: !_isPasswordVisible,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
@@ -106,6 +121,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     child: const Text('REGISTER ACCOUNT', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Already have an account? "),
+                  GestureDetector(
+                    onTap: () {
+                       Navigator.pop(context); // Pops back to Login
+                    },
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(color: Color(0xFF1B3B6F), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              )
             ],
           ),
         ),

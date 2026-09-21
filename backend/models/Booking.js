@@ -4,9 +4,9 @@ const BookingSchema = new mongoose.Schema({
     student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     bookingId: { type: String, required: true, unique: true },
     mode: { type: String, enum: ['Online', 'Offline'], required: true },
-    grade: { type: mongoose.Schema.Types.ObjectId, ref: 'Grade', required: true },
+    grade: { type: String, required: true },
     items: [{
-        subject: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
+        subject: { type: String, required: true },
         teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         ratePerClass: { type: Number, required: true },
         numberOfClasses: { type: Number, required: true },

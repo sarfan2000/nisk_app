@@ -3,7 +3,10 @@ const mongoose = require('mongoose');
 const JobApplicationSchema = new mongoose.Schema({
     job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true },
     worker: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    employer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    employer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    coverLetter: { type: String },
+    expectedSalary: { type: String },
+    cvUrl: { type: String }, // Used for picture/CV upload
     status: { type: String, enum: ['Pending', 'Reviewed', 'Accepted', 'Rejected'], default: 'Pending' },
     appliedAt: { type: Date, default: Date.now }
 });

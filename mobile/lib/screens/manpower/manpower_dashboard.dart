@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nisk_app/screens/manpower/find_jobs_screen.dart';
-import 'package:nisk_app/screens/manpower/employer_dashboard.dart';
+import 'package:nisk_app/screens/manpower/find_employees_screen.dart';
+import 'package:nisk_app/screens/manpower/post_job_screen.dart';
+import 'package:nisk_app/screens/manpower/my_hires_screen.dart';
 
 class ManpowerDashboard extends StatelessWidget {
   const ManpowerDashboard({super.key});
@@ -18,32 +19,19 @@ class ManpowerDashboard extends StatelessWidget {
         child: Column(
           children: [
             const Text(
-              'Find Jobs. Hire Talent.',
+              'Hire Talent.',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange),
             ),
             const SizedBox(height: 24),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text('JOB SEEKER', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-            ),
-            const SizedBox(height: 8),
-            _buildOptionCard(context, 'Find Jobs', Icons.search, () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const FindJobsScreen()));
+            _buildOptionCard(context, 'Post a Job', Icons.post_add, () {
+               Navigator.push(context, MaterialPageRoute(builder: (context) => const PostJobScreen()));
             }),
-            _buildOptionCard(context, 'CV / Resume Upload', Icons.upload_file, () {}),
-            _buildOptionCard(context, 'My Applications', Icons.work_history, () {}),
-            
-            const SizedBox(height: 24),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text('EMPLOYER', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-            ),
-            const SizedBox(height: 8),
-            _buildOptionCard(context, 'Employer Dashboard', Icons.business_center, () {
-               Navigator.push(context, MaterialPageRoute(builder: (context) => const EmployerDashboard()));
+            _buildOptionCard(context, 'Find Workers', Icons.people_alt, () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const FindEmployeesScreen()));
             }),
-            _buildOptionCard(context, 'Post a Job', Icons.post_add, () {}),
-            _buildOptionCard(context, 'Find Employees', Icons.people_alt, () {}),
+            _buildOptionCard(context, 'My Hired Talent', Icons.work, () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MyManpowerHiresScreen()));
+            }),
             _buildOptionCard(context, 'Recruitment Services', Icons.handshake, () {}),
           ],
         ),

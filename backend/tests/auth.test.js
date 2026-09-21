@@ -12,10 +12,7 @@ describe('Authentication API Endpoints', () => {
 
     beforeAll(async () => {
         // Connect to a test database so we don't destroy real data
-        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/nisk_app_test', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/nisk_app_test');
     });
 
     afterAll(async () => {

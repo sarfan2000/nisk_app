@@ -72,7 +72,7 @@ class CleaningDashboard extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cleaning Request Submitted!')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Successfully sent your information, Admin will review this.')));
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
               child: const Text('SUBMIT REQUEST'),

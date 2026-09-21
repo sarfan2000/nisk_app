@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/find_tutor_screen.dart';
+import 'package:nisk_app/screens/education/teacher_application_screen.dart';
+import 'package:nisk_app/screens/education/my_bookings_screen.dart';
 
 class EducationDashboard extends StatelessWidget {
   const EducationDashboard({super.key});
@@ -23,6 +25,12 @@ class EducationDashboard extends StatelessWidget {
             const SizedBox(height: 24),
             _buildOptionCard(context, 'Find Tutors', Icons.person_search, () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const FindTutorScreen()));
+            }),
+            _buildOptionCard(context, 'My Bookings (Status)', Icons.history_edu, () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MyBookingsScreen()));
+            }),
+            _buildOptionCard(context, 'Teach with Us (Apply)', Icons.school, () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const TeacherApplicationScreen()));
             }),
             _buildOptionCard(context, 'Find Courses', Icons.menu_book, () {}),
             _buildOptionCard(context, 'Online Classes', Icons.laptop_chromebook, () {}),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:nisk_app/services/api_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EducationCheckoutScreen extends StatelessWidget {
   final Map<String, dynamic> bookingDetails;
@@ -8,8 +10,8 @@ class EducationCheckoutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double total = bookingDetails['subtotal'] ?? 0.0;
-    double serviceCharge = 100.0;
-    double totalBill = total + serviceCharge;
+    double serviceCharge = bookingDetails['serviceCharge'] ?? 0.0;
+    double totalBill = bookingDetails['total'] ?? total;
 
     return Scaffold(
       appBar: AppBar(
@@ -107,7 +109,7 @@ class EducationCheckoutScreen extends StatelessWidget {
     );
   }
 
-  void _processPayment(BuildContext context) {
+  void _processPayment(BuildContext context) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -117,15 +119,52 @@ class EducationCheckoutScreen extends StatelessWidget {
           children: const [
             CircularProgressIndicator(color: Colors.green),
             SizedBox(height: 16),
-            Text('Processing Secure Payment...')
+            Text('Redirecting to PayHere Secure Gateway...')
           ],
         ),
       ),
     );
 
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context); // close dialog
-      Navigator.pushReplacementNamed(context, '/home');
-    });
+    // Create Booking on the backend first!
+    try {
+      final ApiService api = ApiService();
+      final response = await api.post('/education/book', {
+        'studentId': 'me', // Will be read from token via auth middleware
+        'mode': bookingDetails['mode'],
+        'gradeId': bookingDetails['grade'], // Adjust based on DB format
+        'items': [
+          {
+             'subject': bookingDetails['subject'],
+             'teacher': bookingDetails['teacherId'], 
+             'ratePerClass': bookingDetails['rate'],
+             'numberOfClasses': bookingDetails['classes'],
+             'subtotal': bookingDetails['subtotal']
+          }
+        ],
+        'serviceCharge': bookingDetails['serviceCharge'],
+        'discount': 0,
+      });
+
+      if (context.mounted) Navigator.pop(context); // close loader dialog
+      
+      if (response != null && response['booking'] != null) {
+         final bookingId = response['booking']['bookingId'];
+         
+         // Launch Payhere web view
+         final String paymentUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/api/payment/checkout/$bookingId';
+         final Uri url = Uri.parse(paymentUrl);
+         
+         if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.inAppWebView); // Opens safely without leaving app
+         } else {
+            if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch payment gateway.')));
+         }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Booking failed: $e')));
+      }
+    }
   }
 }
