@@ -16,6 +16,10 @@ dependencies:
   # UI
   google_fonts: ^6.1.0
   cupertino_icons: ^1.0.2
+  device_preview: ^3.0.0
+  image_picker: ^1.2.3
+  url_launcher: ^6.3.2
+  flutter_dotenv: ^6.0.1
 
 dev_dependencies:
   flutter_test:
@@ -27,5 +31,5 @@ flutter:
 
   assets:
     - assets/locales/
-  assets:
     - assets/images/
+    - .env

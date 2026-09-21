@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import 'api_service.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://10.0.2.2:5000/api/auth'; // 10.0.2.2 is mapped to localhost in Android Emulator
-
+  static String get baseUrl {
+    return '${ApiService.baseUrl}/auth';
+  }
   Future<User?> login(String phone, String password) async {
     try {
       final response = await http.post(
