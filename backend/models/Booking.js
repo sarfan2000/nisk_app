@@ -18,7 +18,7 @@ const BookingSchema = new mongoose.Schema({
     discount: { type: Number, default: 0 },
     totalBill: { type: Number, required: true },
     paymentStatus: { type: String, enum: ['Pending', 'Completed', 'Failed'], default: 'Pending' },
-    status: { type: String, enum: ['Pending', 'Accepted', 'Rejected', 'Completed'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Accepted', 'Admin_Approved', 'Teacher_Approved', 'Rejected', 'Completed'], default: 'Pending' },
     createdAt: { type: Date, default: Date.now }
 });
 

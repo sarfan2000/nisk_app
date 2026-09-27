@@ -73,7 +73,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
 
     try {
       final payload = {
-        'employer': '6aa16f847b7caf0fbb2c3680', // Dummy User ID
         'company': _companyController.text,
         'category': _selectedCategory,
         'jobType': _selectedJobType,
@@ -83,13 +82,14 @@ class _PostJobScreenState extends State<PostJobScreen> {
         'nicNumber': _nicController.text,
         'phoneNumber': _phoneController.text,
         'isActive': 'true',
+        'isVerified': 'true', // Auto-verify for testing purposes
       };
 
       await ApiService().postMultipart('/manpower/jobs', payload, [_jobPicture!]);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Successfully sent your information, Admin will review this.'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Profile successfully posted! You are now visible to Employers.'), backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       }

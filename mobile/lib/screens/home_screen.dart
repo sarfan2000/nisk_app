@@ -2,9 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/education_dashboard.dart';
 import 'package:nisk_app/screens/manpower/manpower_dashboard.dart';
 import 'package:nisk_app/screens/products/products_dashboard.dart';
+import 'package:nisk_app/screens/notifications/notifications_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+import 'package:nisk_app/services/api_service.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final ApiService _apiService = ApiService();
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUnreadCount();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final response = await _apiService.get('/notifications/me');
+      if (response != null && mounted) {
+        int count = 0;
+        for (var notif in response) {
+          if (notif['read'] == false) count++;
+        }
+        setState(() {
+          _unreadCount = count;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load home notifications: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +56,43 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Color(0xFFB11218)),
-            onPressed: () {},
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_active, color: Color(0xFFB11218)),
+                onPressed: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationsScreen()));
+                  // Refresh count when coming back
+                  _fetchUnreadCount();
+                },
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+            ],
           ),
         ],
       ),

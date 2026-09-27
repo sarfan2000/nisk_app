@@ -4,9 +4,10 @@ const Product = require('../models/Product');
 const ProductOrder = require('../models/ProductOrder');
 const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 // 1. Create Product (Seller / Production Provider)
-router.post('/', [auth, upload.array('images', 5)], async (req, res) => {
+router.post('/', [auth, role(['Seller']), upload.array('images', 5)], async (req, res) => {
     try {
         const productData = req.body;
 
@@ -29,7 +30,7 @@ router.post('/', [auth, upload.array('images', 5)], async (req, res) => {
 });
 
 // Admin Review / Verify Product
-router.patch('/verify/:productId', async (req, res) => {
+router.patch('/verify/:productId', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const { isApproved } = req.body;
         const product = await Product.findByIdAndUpdate(
@@ -55,7 +56,7 @@ router.get('/', async (req, res) => {
 });
 
 // 3. Purchase / Create Order (Customer)
-router.post('/order', auth, async (req, res) => {
+router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req, res) => {
     try {
         const { productId, quantity, deliveryLocation, deliveryFee } = req.body;
         const customerId = req.user.id;
@@ -94,7 +95,7 @@ router.post('/order', auth, async (req, res) => {
 });
 
 // 4. Get My Orders (Customer)
-router.get('/my-orders', auth, async (req, res) => {
+router.get('/my-orders', [auth, role(['Buyer', 'Student', 'Employer'])], async (req, res) => {
     try {
         const orders = await ProductOrder.find({ customer: req.user.id })
             .populate('product')
@@ -106,14 +107,14 @@ router.get('/my-orders', auth, async (req, res) => {
 });
 
 // 5. Get Seller Orders (Seller)
-router.get('/seller-orders', auth, async (req, res) => {
+router.get('/seller-orders', [auth, role(['Seller'])], async (req, res) => {
     try {
         const myProducts = await Product.find({ seller: req.user.id }).select('_id');
         const productIds = myProducts.map(p => p._id);
 
         const orders = await ProductOrder.find({ product: { $in: productIds } })
             .populate('product')
-            .populate('customer', 'name phone')
+            .populate('Buyer', 'name phone')
             .sort({ createdAt: -1 });
         res.json(orders);
     } catch (err) {
@@ -123,11 +124,14 @@ router.get('/seller-orders', auth, async (req, res) => {
 });
 
 // 6. Update Order Status (Seller Approval)
-router.patch('/orders/:orderId/status', auth, async (req, res) => {
+router.patch('/orders/:orderId/status', [auth, role(['Seller'])], async (req, res) => {
     try {
         const { orderStatus } = req.body;
+        const myProducts = await Product.find({ seller: req.user.id }).select('_id');
+        const productIds = myProducts.map(p => p._id);
+
         const order = await ProductOrder.findOneAndUpdate(
-            { orderId: req.params.orderId },
+            { orderId: req.params.orderId, product: { $in: productIds } },
             { orderStatus },
             { new: true }
         );

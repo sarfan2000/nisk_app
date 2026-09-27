@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
@@ -12,6 +13,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   List<dynamic> _bookings = [];
+  String _userType = '';
 
   @override
   void initState() {
@@ -21,8 +23,18 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
   Future<void> _fetchBookings() async {
     setState(() => _isLoading = true);
+    final prefs = await SharedPreferences.getInstance();
+    _userType = prefs.getString('userType') ?? 'Student';
+
     try {
-      final response = await _apiService.get('/education/my-bookings');
+      String endpoint = '/education/my-bookings'; // Default for Student
+      if (_userType == 'Teacher') {
+        endpoint = '/teacher/bookings/me';
+      } else if (_userType == 'Admin') {
+        endpoint = '/admin/bookings/pending';
+      }
+
+      final response = await _apiService.get(endpoint);
       if (response != null && mounted) {
         setState(() {
           _bookings = response;
@@ -39,9 +51,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
+      case 'teacher_approved':
       case 'completed':
       case 'accepted':
         return Colors.green;
+      case 'admin_approved':
+        return Colors.blue;
       case 'pending':
         return Colors.orange;
       case 'failed':
@@ -49,6 +64,26 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _updateStatus(String bookingId, String newStatus) async {
+    try {
+      String endpoint = '';
+      if (_userType == 'Admin') {
+        endpoint = '/admin/bookings/$bookingId/approve'; // The backend sets status to Admin_Approved
+      } else if (_userType == 'Teacher') {
+        endpoint = '/teacher/booking/$bookingId/status';
+      }
+
+      final body = {'status': newStatus};
+      final response = await _apiService.patch(endpoint, body);
+      if (response != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status updated successfully!')));
+        _fetchBookings(); // Refresh the list
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
     }
   }
 
@@ -177,12 +212,44 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Admin/Teacher Status: $bookingStatus', 
+                                    'Status: $bookingStatus', 
                                     style: TextStyle(fontWeight: FontWeight.w600, color: _getStatusColor(bookingStatus)),
                                   ),
                                 ],
                               ),
-                            )
+                            ),
+                            
+                            // Approval Actions based on Role
+                            if (_userType == 'Admin' && bookingStatus == 'Pending') ...[
+                               const SizedBox(height: 12),
+                               ElevatedButton(
+                                 onPressed: () => _updateStatus(booking['_id'], 'Admin_Approved'),
+                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, minimumSize: const Size.fromHeight(40)),
+                                 child: const Text('Verify & Approve Payment', style: TextStyle(color: Colors.white)),
+                               ),
+                            ],
+                            if (_userType == 'Teacher' && bookingStatus == 'Admin_Approved') ...[
+                               const SizedBox(height: 12),
+                               Row(
+                                 children: [
+                                   Expanded(
+                                     child: ElevatedButton(
+                                       onPressed: () => _updateStatus(booking['_id'], 'Teacher_Approved'),
+                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                       child: const Text('Accept', style: TextStyle(color: Colors.white)),
+                                     ),
+                                   ),
+                                   const SizedBox(width: 8),
+                                   Expanded(
+                                     child: ElevatedButton(
+                                       onPressed: () => _updateStatus(booking['_id'], 'Rejected'),
+                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                       child: const Text('Reject', style: TextStyle(color: Colors.white)),
+                                     ),
+                                   ),
+                                 ]
+                               )
+                            ]
                           ],
                         ),
                       ),

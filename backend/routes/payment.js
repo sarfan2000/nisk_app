@@ -164,7 +164,21 @@ router.post('/webhook', async (req, res) => {
 });
 
 // 3. Return Pages
-router.get('/success', (req, res) => res.send('<h2>Payment Successful! You can close this tab and return to the app.</h2>'));
+router.get('/success', async (req, res) => {
+    // DEV FALLBACK: PayHere cannot send webhooks to localhost. 
+    // This forcibly updates the database when testing locally.
+    const order_id = req.query.order_id;
+    if (order_id) {
+        if (order_id.startsWith('BK')) {
+            await Booking.findOneAndUpdate({ bookingId: order_id }, { paymentStatus: 'Completed' }, { new: true });
+        } else if (order_id.startsWith('PR')) {
+            await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+        } else if (order_id.startsWith('MP')) {
+            await ManpowerBooking.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Completed' }, { new: true });
+        }
+    }
+    res.send('<h2>Payment Successful! You can close this tab and return to the app.</h2>');
+});
 router.get('/cancel', (req, res) => res.send('<h2>Payment Cancelled. You can close this tab.</h2>'));
 
 module.exports = router;

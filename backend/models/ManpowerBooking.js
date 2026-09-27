@@ -11,7 +11,7 @@ const ManpowerBookingSchema = new mongoose.Schema({
     serviceCharge: { type: Number, default: 0 },
     total: { type: Number, required: true },
     paymentStatus: { type: String, enum: ['Pending', 'Completed', 'Failed'], default: 'Pending' },
-    status: { type: String, enum: ['Pending', 'Accepted', 'Rejected', 'Completed'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Admin_Approved', 'Accepted', 'Rejected', 'Completed'], default: 'Pending' },
     createdAt: { type: Date, default: Date.now }
 });
 

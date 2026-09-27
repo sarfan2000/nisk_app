@@ -7,6 +7,7 @@ const TeacherRate = require('../models/TeacherRate');
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 // 1. Get all grades
 router.get('/grades', async (req, res) => {
@@ -33,6 +34,7 @@ router.get('/teachers/:subjectId', async (req, res) => {
     try {
         const subject = await Subject.findById(req.params.subjectId).populate({
             path: 'teachers',
+            match: { isVerified: true, status: 'Active' },
             select: 'name phone location status isVerified'
         });
         if (!subject) return res.status(404).json({ msg: 'Subject not found' });
@@ -61,7 +63,7 @@ router.get('/teacher-rate', async (req, res) => {
 });
 
 // 5. Checkout & Booking
-router.post('/book', auth, async (req, res) => {
+router.post('/book', [auth, role(['Student'])], async (req, res) => {
     try {
         const { mode, gradeId, items, serviceCharge, discount } = req.body;
         const studentId = req.user.id;
@@ -97,8 +99,8 @@ router.post('/book', auth, async (req, res) => {
                 if (item.teacher) {
                     const notify = new Notification({
                         user: item.teacher,
-                        title: 'New Student Booking!',
-                        message: `A student has requested ${item.numberOfClasses} classes. Please review and approve.`,
+                        title: 'New Student Booking Pending Approval',
+                        message: `A student has booked you for ${item.numberOfClasses} classes. It is pending admin payment verification.`,
                         type: 'Alert'
                     });
                     await notify.save();
@@ -114,7 +116,7 @@ router.post('/book', auth, async (req, res) => {
 });
 
 // 6. Get My Bookings (Student)
-router.get('/my-bookings', auth, async (req, res) => {
+router.get('/my-bookings', [auth, role(['Student'])], async (req, res) => {
     try {
         const studentId = req.user.id;
         // Find all bookings for this student, gracefully populate the teacher names if needed
@@ -130,10 +132,14 @@ router.get('/my-bookings', auth, async (req, res) => {
 });
 
 // 7. Get Teacher Bookings (Teacher view)
-router.get('/teacher-bookings', auth, async (req, res) => {
+router.get('/teacher-bookings', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const teacherId = req.user.id;
-        const bookings = await Booking.find({ 'items.teacher': teacherId })
+        // Teacher only sees bookings that Admin has approved
+        const bookings = await Booking.find({
+            'items.teacher': teacherId,
+            status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] }
+        })
             .populate('student', 'name email phone')
             .sort({ createdAt: -1 });
         res.json(bookings);
@@ -142,12 +148,12 @@ router.get('/teacher-bookings', auth, async (req, res) => {
     }
 });
 
-// 8. Update Booking Status (Teacher/Admin logic)
-router.patch('/bookings/:bookingId/status', auth, async (req, res) => {
+// 8. Update Booking Status (Teacher logic)
+router.patch('/bookings/:bookingId/status', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const { status } = req.body;
         const booking = await Booking.findOneAndUpdate(
-            { bookingId: req.params.bookingId },
+            { bookingId: req.params.bookingId, 'items.teacher': req.user.id },
             { status: status },
             { new: true }
         );

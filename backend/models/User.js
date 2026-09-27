@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema({
     userType: {
         type: String,
         required: true,
-        enum: ['Customer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Supplier', 'Provider', 'Admin']
+        enum: ['Buyer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Admin']
     },
     location: {
         province: { type: String },

@@ -3,13 +3,15 @@ const router = express.Router();
 const Attendance = require('../models/Attendance');
 const WorkReport = require('../models/WorkReport');
 const FinancialSetting = require('../models/FinancialSetting');
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 // 1. Mark Attendance (Supervisor)
-router.post('/attendance', async (req, res) => {
+router.post('/attendance', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const attendanceList = req.body.workers.map(workerId => ({
             worker: workerId,
-            supervisor: req.body.supervisorId,
+            supervisor: req.user.id,
             date: req.body.date,
             status: req.body.status,
             checkIn: req.body.checkIn
@@ -23,9 +25,10 @@ router.post('/attendance', async (req, res) => {
 });
 
 // 2. Submit Daily Work Report
-router.post('/work-report', async (req, res) => {
+router.post('/work-report', [auth, role(['Admin', 'Super Admin', 'Worker'])], async (req, res) => {
     try {
-        const report = new WorkReport(req.body);
+        const payload = { ...req.body, submittedBy: req.user.id };
+        const report = new WorkReport(payload);
         await report.save();
         res.status(201).json({ msg: 'Work report submitted', report });
     } catch (err) {
@@ -34,7 +37,7 @@ router.post('/work-report', async (req, res) => {
 });
 
 // 3. Get / Update Break-Even Financials (Admin)
-router.get('/financial-targets', async (req, res) => {
+router.get('/financial-targets', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         let settings = await FinancialSetting.findOne();
         if (!settings) {
@@ -47,7 +50,7 @@ router.get('/financial-targets', async (req, res) => {
     }
 });
 
-router.patch('/financial-targets', async (req, res) => {
+router.patch('/financial-targets', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const settings = await FinancialSetting.findOneAndUpdate(
             {},

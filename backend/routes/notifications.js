@@ -13,11 +13,21 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Get User Notifications
-router.get('/:userId', async (req, res) => {
+// Get User Notifications Securely
+router.get('/me', require('../middleware/auth'), async (req, res) => {
     try {
-        const notifications = await Notification.find({ user: req.params.userId }).sort({ createdAt: -1 });
+        const notifications = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 });
         res.json(notifications);
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// Mark all User's notifications as read
+router.patch('/mark-read', require('../middleware/auth'), async (req, res) => {
+    try {
+        await Notification.updateMany({ user: req.user.id, read: false }, { $set: { read: true } });
+        res.json({ msg: 'Notifications marked as read' });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }

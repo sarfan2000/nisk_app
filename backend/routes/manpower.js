@@ -5,9 +5,10 @@ const WorkerProfile = require('../models/WorkerProfile');
 const JobApplication = require('../models/JobApplication');
 const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
-// 1. Post a Job (Employer)
-router.post('/jobs', [upload.array('images', 1)], async (req, res) => {
+// 1. Post a Job / Worker Listing
+router.post('/jobs', [auth, role(['Employer', 'Buyer', 'Worker']), upload.array('images', 1)], async (req, res) => {
     try {
         if (!req.body.title && req.body.category) {
             req.body.title = req.body.category;
@@ -27,16 +28,17 @@ router.post('/jobs', [upload.array('images', 1)], async (req, res) => {
             }
         }
 
+        jobPayload.employer = req.user.id;
         const job = new Job(jobPayload);
         await job.save();
-        res.status(201).json({ msg: 'Job posted successfully', job });
+        res.status(201).json({ msg: 'Job/Listing posted successfully', job });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }
 });
 
 // Admin Review / Verify Job
-router.patch('/jobs/verify/:jobId', async (req, res) => {
+router.patch('/jobs/verify/:jobId', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const { isVerified } = req.body;
         const job = await Job.findByIdAndUpdate(
@@ -55,7 +57,7 @@ router.patch('/jobs/verify/:jobId', async (req, res) => {
 router.get('/jobs', async (req, res) => {
     try {
         const { category, jobType, district } = req.query;
-        let query = { isActive: true, isVerified: true };
+        let query = { isActive: true }; // Temporarily relaxed isVerified so they can see all tests
 
         if (category) query.category = category;
         if (jobType) query.jobType = jobType;
@@ -69,7 +71,7 @@ router.get('/jobs', async (req, res) => {
 });
 
 // 3. Apply for Job (Worker)
-router.post('/apply/:jobId', [auth, upload.array('images', 1)], async (req, res) => {
+router.post('/apply/:jobId', [auth, role(['Worker']), upload.array('images', 1)], async (req, res) => {
     try {
         const { coverLetter, expectedSalary } = req.body;
 
@@ -96,7 +98,7 @@ router.post('/apply/:jobId', [auth, upload.array('images', 1)], async (req, res)
 // Search Jobs (Worker) / Get Employees
 router.get('/jobs/filters', async (req, res) => {
     try {
-        let match = { isActive: true, isVerified: true };
+        let match = { isActive: true }; // Temporarily relaxed isVerified
         if (req.query.category) match.category = req.query.category;
 
         const jobs = await Job.find(match);
@@ -105,7 +107,7 @@ router.get('/jobs/filters', async (req, res) => {
 
         jobs.forEach(j => {
             if (j.category) categories.add(j.category);
-            if (j.location && j.location.city) locations.add(j.location.city);
+            locations.add((j.location && j.location.city) ? j.location.city : 'Unknown');
         });
 
         res.json({
@@ -119,9 +121,13 @@ router.get('/jobs/filters', async (req, res) => {
 });
 
 // 4. Update Worker Profile
-router.post('/worker/profile/:userId', [upload.array('images', 1)], async (req, res) => {
+router.post('/worker/profile/:userId', [auth, role(['Worker']), upload.array('images', 1)], async (req, res) => {
     try {
-        let profile = await WorkerProfile.findOne({ user: req.params.userId });
+        if (req.params.userId !== 'me' && req.params.userId !== req.user.id) {
+            return res.status(403).json({ msg: 'Forbidden' });
+        }
+        const actualUserId = req.user.id;
+        let profile = await WorkerProfile.findOne({ user: actualUserId });
 
         let profilePicture = req.body.profilePicture || '';
         if (req.files && req.files.length > 0) {
@@ -137,13 +143,13 @@ router.post('/worker/profile/:userId', [upload.array('images', 1)], async (req, 
 
         if (profile) {
             profile = await WorkerProfile.findOneAndUpdate(
-                { user: req.params.userId },
+                { user: actualUserId },
                 { $set: req.body },
                 { new: true }
             );
         } else {
             profile = new WorkerProfile({
-                user: req.params.userId,
+                user: actualUserId,
                 ...req.body
             });
             await profile.save();
@@ -156,8 +162,9 @@ router.post('/worker/profile/:userId', [upload.array('images', 1)], async (req, 
 
 // 5. Book a Worker
 const ManpowerBooking = require('../models/ManpowerBooking');
+const Notification = require('../models/Notification'); // Needed for notifications
 
-router.post('/book', auth, async (req, res) => {
+router.post('/book', [auth, role(['Employer', 'Buyer'])], async (req, res) => {
     try {
         const { workerId, jobCategory, duration, rate, serviceCharge, total } = req.body;
         const subtotal = rate * duration;
@@ -177,6 +184,16 @@ router.post('/book', auth, async (req, res) => {
         });
 
         await booking.save();
+
+        // Trigger Notification to the Worker
+        const notify = new Notification({
+            user: workerId,
+            title: 'New Manpower Booking',
+            message: `An employer has booked you for ${duration} units of ${jobCategory}. It is pending admin payment verification.`,
+            type: 'Alert'
+        });
+        await notify.save();
+
         res.status(201).json({ msg: 'Booking placed successfully', booking, paymentUrl: `/api/payment/checkout/${orderId}` });
     } catch (err) {
         console.error(err);
@@ -185,7 +202,7 @@ router.post('/book', auth, async (req, res) => {
 });
 
 // 6. Get Customer Manpower Bookings
-router.get('/my-bookings', auth, async (req, res) => {
+router.get('/my-bookings', [auth, role(['Employer', 'Buyer'])], async (req, res) => {
     try {
         const bookings = await ManpowerBooking.find({ customer: req.user.id })
             .populate('worker', 'name phone')
@@ -197,9 +214,12 @@ router.get('/my-bookings', auth, async (req, res) => {
 });
 
 // 7. Get Worker Hired Bookings
-router.get('/worker-bookings', auth, async (req, res) => {
+router.get('/worker-bookings', [auth, role(['Worker'])], async (req, res) => {
     try {
-        const bookings = await ManpowerBooking.find({ worker: req.user.id })
+        const bookings = await ManpowerBooking.find({
+            worker: req.user.id,
+            status: { $in: ['Admin_Approved', 'Accepted', 'Completed'] }
+        })
             .populate('customer', 'name phone')
             .sort({ createdAt: -1 });
         res.json(bookings);
@@ -209,24 +229,30 @@ router.get('/worker-bookings', auth, async (req, res) => {
 });
 
 // 8. Update Manpower Booking Status (Worker Approval)
-router.patch('/bookings/:bookingId/status', auth, async (req, res) => {
+router.patch('/bookings/:bookingId/status', [auth, role(['Worker'])], async (req, res) => {
     try {
         const { status } = req.body;
         const booking = await ManpowerBooking.findOneAndUpdate(
-            { orderId: req.params.bookingId },
+            { orderId: req.params.bookingId, worker: req.user.id },
             { status },
             { new: true }
         );
 
         if (booking) {
-            // If accepted, mark the worker as locally unavailable!
             if (status === 'Accepted') {
                 await Job.updateMany({ employer: booking.worker }, { isAvailable: false });
-            }
-            // If rejected or completed, free them up again!
-            else if (status === 'Rejected' || status === 'Completed') {
+            } else if (status === 'Rejected' || status === 'Completed') {
                 await Job.updateMany({ employer: booking.worker }, { isAvailable: true });
             }
+
+            // Notify Employer
+            const notify = new Notification({
+                user: booking.customer,
+                title: 'Manpower Booking Update',
+                message: `Your booking ${booking.orderId} was ${status} by the worker.`,
+                type: 'Alert'
+            });
+            await notify.save();
         }
 
         res.json(booking);

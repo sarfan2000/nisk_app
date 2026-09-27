@@ -21,7 +21,9 @@ router.get('/', async (req, res) => {
             // Find Teachers
             results.teachers = await User.find({
                 userType: 'Teacher',
-                name: searchString
+                name: searchString,
+                isVerified: true,
+                status: 'Active'
             }).select('name location rating');
 
             // Find Jobs

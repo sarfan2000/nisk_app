@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
-class TeacherDashboard extends StatefulWidget {
-  const TeacherDashboard({super.key});
+class WorkerDashboard extends StatefulWidget {
+  const WorkerDashboard({super.key});
 
   @override
-  State<TeacherDashboard> createState() => _TeacherDashboardState();
+  State<WorkerDashboard> createState() => _WorkerDashboardState();
 }
 
-class _TeacherDashboardState extends State<TeacherDashboard> {
+class _WorkerDashboardState extends State<WorkerDashboard> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   List<dynamic> _bookings = [];
@@ -16,13 +16,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   @override
   void initState() {
     super.initState();
-    _fetchTeacherBookings();
+    _fetchWorkerBookings();
   }
 
-  Future<void> _fetchTeacherBookings() async {
+  Future<void> _fetchWorkerBookings() async {
     setState(() => _isLoading = true);
     try {
-      final response = await _apiService.get('/education/teacher-bookings');
+      final response = await _apiService.get('/manpower/worker-bookings');
       if (response != null && mounted) {
         setState(() {
           _bookings = response;
@@ -36,42 +36,30 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Future<void> _updateBookingStatus(String bookingId, String currentStatus) async {
-    final newStatus = currentStatus == 'Pending' ? 'Accepted' : 'Pending';
+    final newStatus = currentStatus == 'Admin_Approved' ? 'Accepted' : 'Admin_Approved';
     try {
-      final response = await _apiService.patch('/education/bookings/$bookingId/status', {'status': newStatus});
+      final response = await _apiService.patch('/manpower/bookings/$bookingId/status', {'status': newStatus});
       if (response != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status updated to $newStatus')));
-        _fetchTeacherBookings();
+        _fetchWorkerBookings();
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
     }
   }
 
-  int get _totalStudents {
-    return _bookings.where((b) => b['student'] != null).map((b) => b['student']['_id']).toSet().length;
+  int get _totalEmployers {
+    return _bookings.where((b) => b['customer'] != null).map((b) => b['customer']['_id']).toSet().length;
   }
 
-  int get _totalClasses {
-    int count = 0;
-    for (var b in _bookings) {
-      if (b['items'] != null) {
-        for (var item in b['items']) {
-          count += (item['numberOfClasses'] as num?)?.toInt() ?? 0;
-        }
-      }
-    }
-    return count;
+  int get _totalJobs {
+    return _bookings.length;
   }
 
   String get _totalEarnings {
     double earnings = 0;
     for (var b in _bookings) {
-      if (b['items'] != null) {
-        for (var item in b['items']) {
-          earnings += (item['subtotal'] as num?)?.toDouble() ?? 0.0;
-        }
-      }
+      earnings += (b['subtotal'] as num?)?.toDouble() ?? 0.0;
     }
     if (earnings >= 1000) {
       return 'LKR ${(earnings / 1000).toStringAsFixed(1)}K';
@@ -83,10 +71,10 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TEACHER DASHBOARD', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.redAccent,
+        title: const Text('WORKER DASHBOARD', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchTeacherBookings)],
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchWorkerBookings)],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -95,39 +83,39 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           children: [
             const ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(radius: 30, backgroundColor: Colors.redAccent, child: Icon(Icons.person, color: Colors.white)),
-              title: Text('Welcome, Teacher', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              subtitle: Text('Manage your schedule.'),
+              leading: CircleAvatar(radius: 30, backgroundColor: Colors.orange, child: Icon(Icons.person, color: Colors.white)),
+              title: Text('Welcome, Worker', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              subtitle: Text('Manage your jobs.'),
               trailing: Icon(Icons.edit, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildStatCard('Students', '$_totalStudents', Colors.purple),
-                _buildStatCard('Classes', '$_totalClasses', Colors.blue),
+                _buildStatCard('Employers', '$_totalEmployers', Colors.purple),
+                _buildStatCard('Jobs', '$_totalJobs', Colors.blue),
                 _buildStatCard('Earnings', _totalEarnings, Colors.green),
               ],
             ),
             const SizedBox(height: 32),
-            const Text('Upcoming Bookings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Upcoming Jobs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             
             _isLoading 
                 ? const Center(child: CircularProgressIndicator()) 
                 : _bookings.isEmpty 
-                    ? const Padding(padding: EdgeInsets.all(20), child: Text('No student bookings assigned yet.', style: TextStyle(color: Colors.grey)))
+                    ? const Padding(padding: EdgeInsets.all(20), child: Text('No jobs assigned yet.', style: TextStyle(color: Colors.grey)))
                     : ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _bookings.length,
                         itemBuilder: (context, index) {
                           final b = _bookings[index];
-                          final studentName = b['student'] != null ? b['student']['name'] : 'Unknown Student';
-                          final grade = b['grade'] ?? 'N/A';
-                          final status = b['status'] ?? 'Pending';
-                          final String title = b['bookingId'] ?? 'BK-Unknown';
-                          final String details = 'Student: $studentName ($grade)';
+                          final customerName = b['customer'] != null ? b['customer']['name'] : 'Unknown Employer';
+                          final jobCategory = b['jobCategory'] ?? 'N/A';
+                          final status = b['status'] ?? 'Admin_Approved';
+                          final String title = b['orderId'] ?? 'MP-Unknown';
+                          final String details = 'Employer: $customerName ($jobCategory)';
                           
                           return _buildBookingCard(title, details, status);
                         },
@@ -168,9 +156,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                   Icon(status == 'Accepted' ? Icons.check_circle : Icons.pending, size: 16, color: status == 'Pending' ? Colors.orange : Colors.green),
+                   Icon(status == 'Accepted' ? Icons.check_circle : Icons.pending, size: 16, color: status == 'Admin_Approved' ? Colors.orange : Colors.green),
                    const SizedBox(width: 4),
-                   Text('Status: $status', style: TextStyle(color: status == 'Pending' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold)),
+                   Text('Status: $status', style: TextStyle(color: status == 'Admin_Approved' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold)),
                 ]
               )
             ],
@@ -179,10 +167,10 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         trailing: ElevatedButton(
           onPressed: () => _updateBookingStatus(title, status),
           style: ElevatedButton.styleFrom(
-            backgroundColor: status == 'Pending' ? Colors.green : Colors.grey,
+            backgroundColor: status == 'Admin_Approved' ? Colors.green : Colors.grey,
             foregroundColor: Colors.white
           ),
-          child: Text(status == 'Pending' ? 'Approve' : 'Reject'),
+          child: Text(status == 'Admin_Approved' ? 'Approve' : 'Reject'),
         ),
       ),
     );

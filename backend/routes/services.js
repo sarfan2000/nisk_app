@@ -1,14 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const ServiceRequest = require('../models/ServiceRequest');
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 // Create service request
-router.post('/request', async (req, res) => {
+router.post('/request', [auth, role(['Buyer', 'Employer'])], async (req, res) => {
     try {
         const { customerId, serviceCategory, details, location, date, time } = req.body;
 
         const request = new ServiceRequest({
-            customer: customerId,
+            customer: req.user.id,
             serviceCategory,
             details,
             location,
@@ -25,9 +27,9 @@ router.post('/request', async (req, res) => {
 });
 
 // Get all requests
-router.get('/', async (req, res) => {
+router.get('/', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
-        const requests = await ServiceRequest.find().populate('customer', 'name phone').populate('provider', 'name phone');
+        const requests = await ServiceRequest.find().populate('Buyer', 'name phone').populate('provider', 'name phone');
         res.json(requests);
     } catch (err) {
         console.error(err);

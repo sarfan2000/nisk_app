@@ -55,7 +55,7 @@ router.get('/filters', async (req, res) => {
 });
 
 // Admin Review / Verify Teacher (Hybrid Model)
-router.patch('/verify/:profileId', async (req, res) => {
+router.patch('/verify/:profileId', [require('../middleware/auth'), require('../middleware/role')(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const { isVerified } = req.body;
         const profile = await TeacherProfile.findByIdAndUpdate(
@@ -63,6 +63,11 @@ router.patch('/verify/:profileId', async (req, res) => {
             { isVerified },
             { new: true }
         );
+        if (profile && profile.user && isVerified) {
+            await require('../models/User').findByIdAndUpdate(profile.user, { isVerified: true, status: 'Active' });
+        } else if (profile && profile.user && !isVerified) {
+            await require('../models/User').findByIdAndUpdate(profile.user, { isVerified: false });
+        }
         res.json({ msg: 'Profile verification status updated', profile });
     } catch (err) {
         console.error(err);
@@ -122,10 +127,13 @@ router.post('/profile/:userId', [require('../middleware/auth'), upload.array('im
 });
 
 // Get Teacher Bookings
-router.get('/bookings/:userId', async (req, res) => {
+router.get('/bookings/me', [require('../middleware/auth'), require('../middleware/role')(['Teacher'])], async (req, res) => {
     try {
-        // Find bookings where one of the items has this teacher
-        const bookings = await Booking.find({ 'items.teacher': req.params.userId })
+        // Find bookings where admin has approved
+        const bookings = await Booking.find({
+            'items.teacher': req.user.id,
+            status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] }
+        })
             .populate('student', 'name phone location')
             .populate('grade', 'name')
             .populate('items.subject', 'name');
@@ -137,10 +145,10 @@ router.get('/bookings/:userId', async (req, res) => {
 });
 
 // Update Booking Status
-router.patch('/booking/:bookingId/status', async (req, res) => {
+router.patch('/booking/:bookingId/status', [require('../middleware/auth'), require('../middleware/role')(['Teacher'])], async (req, res) => {
     try {
         const { status } = req.body;
-        const booking = await Booking.findByIdAndUpdate(req.params.bookingId, { status }, { new: true }).populate('student', 'name');
+        const booking = await Booking.findOneAndUpdate({ _id: req.params.bookingId, 'items.teacher': req.user.id }, { status }, { new: true }).populate('student', 'name');
 
         if (booking && booking.student) {
             const notify = new Notification({

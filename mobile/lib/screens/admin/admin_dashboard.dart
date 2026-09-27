@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'admin_approvals_screen.dart';
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
@@ -34,11 +34,13 @@ class AdminDashboard extends StatelessWidget {
             const Text('Management Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.people),
-              title: const Text('User Management'),
-              subtitle: const Text('Approve / Suspend / Verify Providers'),
+              leading: const Icon(Icons.assignment_turned_in, color: Colors.green),
+              title: const Text('Manpower Payment Approvals'),
+              subtitle: const Text('Approve payments to notify workers'),
               trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () {},
+              onTap: () {
+                 Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminApprovalsScreen()));
+              },
               tileColor: Colors.grey.shade100,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),

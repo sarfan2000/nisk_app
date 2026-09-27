@@ -15,8 +15,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   
-  String _selectedUserType = 'Customer';
-  final List<String> _userTypes = ['Customer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Provider'];
+  String _selectedUserType = 'Buyer';
+  final List<String> _userTypes = ['Buyer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Admin'];
   
   bool _isLoading = false;
   bool _isPasswordVisible = false;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:device_preview/device_preview.dart';
-import 'package:device_preview/presets.dart';
+// No presets import needed
 import 'package:nisk_app/screens/home_screen.dart';
 import 'package:nisk_app/screens/login_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,11 +11,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
-  DevicePreview.enable(enabled: !kReleaseMode);
-  if (!kReleaseMode) {
-    DevicePreview.maybeController?.applyPreset(DevicePresets.iPhone16Pro);
-  }
-  runApp(const NiskApp());
+  runApp(
+    DevicePreview(
+      enabled: !kReleaseMode,
+      builder: (context) => const NiskApp(),
+    ),
+  );
 }
 
 class NiskApp extends StatelessWidget {
@@ -31,6 +32,9 @@ class NiskApp extends StatelessWidget {
         textTheme: GoogleFonts.interTextTheme(),
         useMaterial3: true,
       ),
+      useInheritedMediaQuery: true,
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),

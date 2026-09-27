@@ -2,11 +2,14 @@ const express = require('express');
 const router = express.Router();
 const CleaningRequest = require('../models/CleaningRequest');
 const CleaningTeam = require('../models/CleaningTeam');
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 // 1. Submit Cleaning Service Request (Customer)
-router.post('/request', async (req, res) => {
+router.post('/request', [auth, role(['Buyer', 'Employer'])], async (req, res) => {
     try {
-        const checkRequest = new CleaningRequest(req.body);
+        const payload = { ...req.body, customer: req.user.id };
+        const checkRequest = new CleaningRequest(payload);
         await checkRequest.save();
         res.status(201).json({ msg: 'Cleaning request submitted', request: checkRequest });
     } catch (err) {
@@ -15,10 +18,10 @@ router.post('/request', async (req, res) => {
 });
 
 // 2. Get Cleaning Requests (Admin / Supervisor)
-router.get('/requests', async (req, res) => {
+router.get('/requests', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const requests = await CleaningRequest.find()
-            .populate('customer', 'name phone')
+            .populate('Buyer', 'name phone')
             .populate('assignedTeam');
         res.json(requests);
     } catch (err) {
@@ -27,7 +30,7 @@ router.get('/requests', async (req, res) => {
 });
 
 // 3. Assign Team to Request (Office Staff / Admin)
-router.patch('/assign/:requestId', async (req, res) => {
+router.patch('/assign/:requestId', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const { teamId } = req.body;
         const request = await CleaningRequest.findByIdAndUpdate(
@@ -42,7 +45,7 @@ router.patch('/assign/:requestId', async (req, res) => {
 });
 
 // 4. Update Job Status (Supervisor / Worker)
-router.patch('/status/:requestId', async (req, res) => {
+router.patch('/status/:requestId', [auth, role(['Admin', 'Super Admin', 'Worker'])], async (req, res) => {
     try {
         const { status } = req.body;
         const request = await CleaningRequest.findByIdAndUpdate(
