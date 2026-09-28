@@ -71,27 +71,6 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           if (!_hasSearched) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Suggested Categories', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildFilterChip('Mathematics', Colors.blue, 'Math'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Cleaner', Colors.orange, 'Cleaner'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Oil', Colors.green, 'Oil'),
-                ],
-              ),
-            ),
             const Expanded(
               child: Center(
                 child: Column(
@@ -169,14 +148,6 @@ class _SearchScreenState extends State<SearchScreen> {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please navigate to the exact hub to view this item!')));
         },
       ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, Color color, String query) {
-    return ActionChip(
-      label: Text(label, style: const TextStyle(color: Colors.white)),
-      backgroundColor: color,
-      onPressed: () => _performSearch(query),
     );
   }
 }

@@ -23,24 +23,31 @@ class AuthService {
         final String token = data['token'];
         // Extract roles
         List<dynamic> roles = data['user']['roles'] ?? [];
-        // Prefer what they actually registered as (userType)
-        String activeRole = data['user']['userType'] ?? 'Buyer'; 
+        final prefs = await SharedPreferences.getInstance();
         
-        // Ensure their chosen userType is actually in their roles array, otherwise fallback
+        // Preserve activeRole if already set in SharedPreferences and still valid
+        String? savedActiveRole = prefs.getString('activeRole');
+        String activeRole = savedActiveRole ?? data['user']['userType'] ?? 'Buyer'; 
+        
+        // Ensure the chosen role is actually in their roles array, otherwise fallback
         if (roles.isNotEmpty) {
            bool hasRegisteredRole = roles.any((r) => r['role'] == activeRole && r['status'] == 'Active');
            if (!hasRegisteredRole) {
-               activeRole = roles.first['role'];
+               activeRole = data['user']['userType'] ?? roles.first['role'];
+               bool hasFallbackRole = roles.any((r) => r['role'] == activeRole && r['status'] == 'Active');
+               if (!hasFallbackRole) {
+                   activeRole = roles.first['role'];
+               }
            }
         }
 
         // Persist token and roles securely
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('x-auth-token', token);
         await prefs.setString('userType', data['user']['userType'] ?? 'Buyer'); // Legacy support
         await prefs.setString('roles', jsonEncode(roles));
         await prefs.setString('activeRole', activeRole);
         await prefs.setString('profilePic', data['user']['profilePic'] ?? '');
+
 
         return User.fromJson(data['user'], token);
       } else {
