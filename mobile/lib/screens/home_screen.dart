@@ -3,8 +3,13 @@ import 'package:nisk_app/screens/education/education_dashboard.dart';
 import 'package:nisk_app/screens/manpower/manpower_dashboard.dart';
 import 'package:nisk_app/screens/products/products_dashboard.dart';
 import 'package:nisk_app/screens/notifications/notifications_screen.dart';
-
+import 'package:nisk_app/screens/search_screen.dart';
+import 'package:nisk_app/screens/messages/messages_screen.dart';
+import 'package:nisk_app/screens/profile_screen.dart';
 import 'package:nisk_app/services/api_service.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nisk_app/services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,11 +21,24 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
   int _unreadCount = 0;
+  List<dynamic> _userRoles = [];
+  String _activeRole = 'Buyer';
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchUnreadCount();
+    _loadRoles();
+  }
+
+  Future<void> _loadRoles() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _activeRole = prefs.getString('activeRole') ?? 'Buyer';
+      String rolesJson = prefs.getString('roles') ?? '[]';
+      _userRoles = jsonDecode(rolesJson);
+    });
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -44,61 +62,98 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Color(0xFFB11218)),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-          ),
-        ),
-        actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_active, color: Color(0xFFB11218)),
-                onPressed: () async {
-                  await Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationsScreen()));
-                  // Refresh count when coming back
-                  _fetchUnreadCount();
-                },
-              ),
-              if (_unreadCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '$_unreadCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-            ],
-          ),
+      appBar: _currentIndex == 0 ? _buildHomeAppBar() : null,
+      drawer: _currentIndex == 0 ? _buildRoleSwitcherDrawer() : null, // Only Drawer on Home
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildHomeContent(context),
+          const SearchScreen(),
+          const MessagesScreen(),
+          const ProfileScreen(),
         ],
       ),
-      drawer: const Drawer(),
-      body: SingleChildScrollView(
-        child: Padding(
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF1B3B6F),
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.message_outlined), label: 'Messages'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildHomeAppBar() {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu, color: Color(0xFFB11218)),
+          onPressed: () {
+            Scaffold.of(context).openDrawer();
+          },
+        ),
+      ),
+      actions: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_active, color: Color(0xFFB11218)),
+              onPressed: () async {
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationsScreen()));
+                // Refresh count when coming back
+                _fetchUnreadCount();
+              },
+            ),
+            if (_unreadCount > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    '$_unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHomeContent(BuildContext context) {
+    return SingleChildScrollView(
+      child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -187,21 +242,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFFB11218),
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.message_outlined), label: 'Messages'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-      ),
-    );
+          ),
+        ),
+      );
   }
 
   Widget _buildLargeSectorButton(
@@ -254,6 +297,125 @@ class _HomeScreenState extends State<HomeScreen> {
             const Icon(Icons.arrow_forward, color: Colors.white),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRoleSwitcherDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              color: const Color(0xFF1B3B6F),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Active Mode', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(_activeRole.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Align(alignment: Alignment.centerLeft, child: Text('Switch Profile Mode:', style: TextStyle(fontWeight: FontWeight.bold))),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _userRoles.length,
+                itemBuilder: (context, index) {
+                  final roleObj = _userRoles[index];
+                  final roleName = roleObj['role'];
+                  final bool isActive = _activeRole == roleName;
+
+                  return ListTile(
+                    leading: Icon(
+                      Icons.account_circle, 
+                      color: isActive ? const Color(0xFF1B3B6F) : Colors.grey
+                    ),
+                    title: Text(roleName, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+                    trailing: isActive ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('activeRole', roleName);
+                      setState(() {
+                        _activeRole = roleName;
+                      });
+                      if (mounted) Navigator.pop(context); // close drawer
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Switched to $roleName Mode')));
+                    },
+                  );
+                },
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline),
+              title: const Text('Apply for a new role'),
+              onTap: () {
+                _showAddRoleModal(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                await AuthService().logout();
+                if (mounted) Navigator.pushReplacementNamed(context, '/login');
+              },
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddRoleModal(BuildContext context) {
+    final allPossibleRoles = ['Buyer', 'Seller', 'Worker', 'Employer', 'Teacher', 'Student'];
+    final existingRoleNames = _userRoles.map((r) => r['role'].toString()).toList();
+    final missingRoles = allPossibleRoles.where((r) => !existingRoleNames.contains(r)).toList();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Account Profile'),
+        content: missingRoles.isEmpty 
+          ? const Text('You already have all available roles active!')
+          : SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: missingRoles.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    leading: const Icon(Icons.add_box, color: Colors.green),
+                    title: Text(missingRoles[index]),
+                    onTap: () async {
+                      Navigator.pop(context); // Close dialog
+                      try {
+                        final updatedRoles = await AuthService().addRole(missingRoles[index]);
+                        setState(() {
+                           _userRoles = updatedRoles;
+                        });
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${missingRoles[index]} role successfully added!')));
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}')));
+                        }
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))
+        ],
       ),
     );
   }

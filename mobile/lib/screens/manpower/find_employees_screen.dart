@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nisk_app/services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nisk_app/screens/manpower/manpower_checkout_screen.dart';
 
 class FindEmployeesScreen extends StatefulWidget {
   const FindEmployeesScreen({super.key});
@@ -75,7 +76,6 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
   void _showCheckoutDialog() {
     double rate = 2000.0;
     if (_selectedEmployee != null && _selectedEmployee!['salary'] != null) {
-      // attempt to parse the rate. E.g "2000" or "LKR 2000"
       final s = _selectedEmployee!['salary'].toString().replaceAll(RegExp(r'[^0-9.]'), '');
       if (s.isNotEmpty) rate = double.tryParse(s) ?? 2000.0;
     }
@@ -109,7 +109,21 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
           ElevatedButton(
             onPressed: () {
                Navigator.pop(context);
-               _processPayment();
+               Navigator.push(context, MaterialPageRoute(builder: (context) => ManpowerCheckoutScreen(
+                 bookingDetails: {
+                   'category': _selectedCategory,
+                   'location': _selectedLocation,
+                   'professional': empName,
+                   'workerId': _selectedEmployee!['employer'] != null 
+                             ? (_selectedEmployee!['employer']['_id'] ?? _selectedEmployee!['_id']) 
+                             : _selectedEmployee!['_id'],
+                   'days': _numberOfDays,
+                   'rate': rate,
+                   'subtotal': subtotal,
+                   'serviceCharge': serviceCharge,
+                   'total': grandTotal
+                 }
+               )));
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
             child: const Text('PROCEED TO PAYMENT'),
@@ -119,60 +133,6 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
     );
   }
 
-  Future<void> _processPayment() async {
-    if (_selectedEmployee == null) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: Colors.orange),
-            SizedBox(height: 16),
-            Text('Generating Secure Payment...')
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final rate = double.tryParse(_selectedEmployee!['salary']?.toString() ?? '1000') ?? 1000.0;
-      final subtotal = rate * _numberOfDays;
-      final serviceCharge = subtotal * 0.05;
-      final total = subtotal + serviceCharge;
-
-      final response = await _apiService.post('/manpower/book', {
-        'workerId': _selectedEmployee!['employer'] != null 
-             ? (_selectedEmployee!['employer']['_id'] ?? _selectedEmployee!['_id']) 
-             : _selectedEmployee!['_id'],
-        'jobCategory': _selectedCategory,
-        'duration': _numberOfDays,
-        'rate': rate,
-        'serviceCharge': serviceCharge,
-        'total': total
-      });
-
-      if (mounted) Navigator.pop(context); // Close loader
-
-      if (response != null && response['paymentUrl'] != null) {
-         final String paymentUrl = '${ApiService.baseUrl.replaceAll('/api', '')}${response['paymentUrl']}';
-         final Uri url = Uri.parse(paymentUrl);
-         
-         if (await canLaunchUrl(url)) {
-           await launchUrl(url, mode: LaunchMode.inAppWebView);
-         } else {
-           if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch payment portal')));
-         }
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Booking failed: $e')));
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

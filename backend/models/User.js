@@ -5,10 +5,14 @@ const UserSchema = new mongoose.Schema({
     phone: { type: String, required: true, unique: true },
     email: { type: String, required: false },
     password: { type: String, required: true },
+    roles: [{
+        role: { type: String, enum: ['Buyer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Admin'] },
+        status: { type: String, enum: ['Pending', 'Active', 'Rejected', 'Suspended'], default: 'Active' },
+        appliedAt: { type: Date, default: Date.now }
+    }],
     userType: {
         type: String,
-        required: true,
-        enum: ['Buyer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Admin']
+        required: false // Deprecated, kept temporarily for migration
     },
     location: {
         province: { type: String },

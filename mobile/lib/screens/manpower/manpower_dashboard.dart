@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/manpower/find_employees_screen.dart';
 import 'package:nisk_app/screens/manpower/post_job_screen.dart';
 import 'package:nisk_app/screens/manpower/my_hires_screen.dart';
+import 'package:nisk_app/screens/manpower/my_job_bookings_screen.dart';
 import 'package:nisk_app/screens/manpower/worker_dashboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,7 +25,7 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
   Future<void> _loadUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _userType = prefs.getString('userType') ?? 'Buyer';
+      _userType = prefs.getString('activeRole') ?? prefs.getString('userType') ?? 'Buyer';
     });
   }
 
@@ -62,7 +63,7 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerDashboard()));
               }),
               _buildOptionCard(context, 'Review Job Bookings', Icons.assignment_turned_in, () {
-                 Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerDashboard()));
+                 Navigator.push(context, MaterialPageRoute(builder: (context) => const MyJobBookingsScreen()));
               }),
               _buildOptionCard(context, 'Post a Job / Service', Icons.post_add, () {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PostJobScreen()));

@@ -25,7 +25,7 @@ class _EducationDashboardState extends State<EducationDashboard> {
   Future<void> _loadUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _userType = prefs.getString('userType') ?? 'Buyer';
+      _userType = prefs.getString('activeRole') ?? prefs.getString('userType') ?? 'Buyer';
     });
   }
 

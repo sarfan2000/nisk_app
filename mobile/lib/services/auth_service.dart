@@ -21,11 +21,21 @@ class AuthService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final String token = data['token'];
-        
-        // Persist token securely
+        // Extract roles
+        List<dynamic> roles = data['user']['roles'] ?? [];
+        String activeRole = 'Buyer'; // Default active role
+        if (roles.isNotEmpty) {
+           // Default to their primary active role if it's not simply Buyer
+           var primaryRole = roles.firstWhere((r) => r['role'] != 'Buyer' && r['status'] == 'Active', orElse: () => roles[0]);
+           activeRole = primaryRole['role'];
+        }
+
+        // Persist token and roles securely
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('x-auth-token', token);
-        await prefs.setString('userType', data['user']['userType']);
+        await prefs.setString('userType', data['user']['userType'] ?? 'Buyer'); // Legacy support
+        await prefs.setString('roles', jsonEncode(roles));
+        await prefs.setString('activeRole', activeRole);
 
         return User.fromJson(data['user'], token);
       } else {
@@ -40,6 +50,36 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('x-auth-token');
     await prefs.remove('userType');
+    await prefs.remove('roles');
+    await prefs.remove('activeRole');
+  }
+
+  Future<List<dynamic>> addRole(String roleName) async {
+    try {
+      final token = await getToken();
+      final response = await http.post(
+        Uri.parse('$baseUrl/add-role'),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token ?? '',
+        },
+        body: jsonEncode({'role': roleName}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> updatedRoles = data['roles'];
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('roles', jsonEncode(updatedRoles));
+        
+        return updatedRoles;
+      } else {
+        throw Exception(jsonDecode(response.body)['msg'] ?? 'Failed to add role');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 
   Future<String?> getToken() async {

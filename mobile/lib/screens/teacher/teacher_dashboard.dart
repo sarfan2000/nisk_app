@@ -170,7 +170,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 children: [
                    Icon(status == 'Accepted' ? Icons.check_circle : Icons.pending, size: 16, color: status == 'Pending' ? Colors.orange : Colors.green),
                    const SizedBox(width: 4),
-                   Text('Status: $status', style: TextStyle(color: status == 'Pending' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold)),
+                   Expanded(
+                     child: Text('Status: $status', style: TextStyle(color: status == 'Pending' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis, maxLines: 1),
+                   ),
                 ]
               )
             ],
