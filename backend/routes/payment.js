@@ -76,8 +76,8 @@ router.get('/checkout/:orderId', async (req, res) => {
             <p style="text-align:center;">If you are not redirected automatically, please click the button below.</p>
             <form id="payhere-form" method="post" action="https://sandbox.payhere.lk/pay/checkout" style="text-align:center;">   
                 <input type="hidden" name="merchant_id" value="${MERCHANT_ID}">    
-                <input type="hidden" name="return_url" value="${baseUrl}/api/payment/success">
-                <input type="hidden" name="cancel_url" value="${baseUrl}/api/payment/cancel">
+                <input type="hidden" name="return_url" value="${baseUrl}/api/payment/success?order_id=${orderId}">
+                <input type="hidden" name="cancel_url" value="${baseUrl}/api/payment/cancel?order_id=${orderId}">
                 <input type="hidden" name="notify_url" value="${baseUrl}/api/payment/webhook">  
                 <input type="hidden" name="order_id" value="${orderId}">
                 <input type="hidden" name="items" value="Booking - ${orderId}">
@@ -134,22 +134,34 @@ router.post('/webhook', async (req, res) => {
                     await notify.save();
                 }
             } else if (order_id.startsWith('PR')) {
-                const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
-                if (pOrder) {
-                    const Product = require('../models/Product');
-                    const productObj = await Product.findById(pOrder.product);
-                    if (productObj) {
-                        productObj.stock -= pOrder.quantity;
-                        await productObj.save();
-                    }
+                const existingOrder = await ProductOrder.findOne({ orderId: order_id });
+                if (existingOrder && existingOrder.paymentStatus !== 'Paid') {
+                    const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+                    if (pOrder) {
+                        const Product = require('../models/Product');
+                        const productObj = await Product.findById(pOrder.product);
+                        if (productObj) {
+                            productObj.stock -= pOrder.quantity;
+                            if (productObj.stock < 0) productObj.stock = 0; // fallback safety
+                            await productObj.save();
 
-                    const notify = new Notification({
-                        user: pOrder.customer,
-                        title: 'Payment Successful',
-                        message: `Your payment for Product Order ${order_id} has been processed successfully.`,
-                        type: 'Alert'
-                    });
-                    await notify.save();
+                            const notifySeller = new Notification({
+                                user: productObj.seller,
+                                title: 'New Product Sale!',
+                                message: `A buyer successfully paid for ${pOrder.quantity}x '${productObj.name}'. Order: ${order_id}`,
+                                type: 'Reminder'
+                            });
+                            await notifySeller.save();
+                        }
+
+                        const notify = new Notification({
+                            user: pOrder.customer,
+                            title: 'Payment Successful',
+                            message: `Your payment for Product Order ${order_id} has been processed successfully.`,
+                            type: 'Alert'
+                        });
+                        await notify.save();
+                    }
                 }
             } else if (order_id.startsWith('MP')) {
                 const mBooking = await ManpowerBooking.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Completed' }, { new: true });
@@ -179,13 +191,26 @@ router.get('/success', async (req, res) => {
         if (order_id.startsWith('BK')) {
             await Booking.findOneAndUpdate({ bookingId: order_id }, { paymentStatus: 'Completed' }, { new: true });
         } else if (order_id.startsWith('PR')) {
-            const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
-            if (pOrder) {
-                const Product = require('../models/Product');
-                const productObj = await Product.findById(pOrder.product);
-                if (productObj) {
-                    productObj.stock -= pOrder.quantity;
-                    await productObj.save();
+            const existingOrder = await ProductOrder.findOne({ orderId: order_id });
+            if (existingOrder && existingOrder.paymentStatus !== 'Paid') {
+                const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+                if (pOrder) {
+                    const Product = require('../models/Product');
+                    const productObj = await Product.findById(pOrder.product);
+                    if (productObj) {
+                        productObj.stock -= pOrder.quantity;
+                        if (productObj.stock < 0) productObj.stock = 0; // fallback safety
+                        await productObj.save();
+
+                        const Notification = require('../models/Notification');
+                        const notifySeller = new Notification({
+                            user: productObj.seller,
+                            title: 'New Product Sale!',
+                            message: `A buyer successfully paid for ${pOrder.quantity}x '${productObj.name}'. Order: ${order_id}`,
+                            type: 'Reminder'
+                        });
+                        await notifySeller.save();
+                    }
                 }
             }
         } else if (order_id.startsWith('MP')) {

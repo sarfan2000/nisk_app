@@ -40,7 +40,10 @@ class _AdminApprovalsScreenState extends State<AdminApprovalsScreen> {
     try {
       await _apiService.patch('/admin/manpower-bookings/$id/approve', {});
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Approved! Worker Notified.', backgroundColor: Colors.green)));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Payment Approved! Worker Notified.'),
+          backgroundColor: Colors.green,
+        ));
         _fetchPendingBookings();
       }
     } catch (e) {

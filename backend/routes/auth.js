@@ -27,8 +27,11 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Assign all 6 roles to every user globally on creation
+        // Assign default 6 roles, but keep Delivery strictly opt-in unless explicitly registered as one
         const allRoles = ['Buyer', 'Student', 'Teacher', 'Employer', 'Worker', 'Seller'];
+        if (userType && !allRoles.includes(userType)) {
+            allRoles.push(userType); // This includes 'Delivery' if they picked it
+        }
         let newRoles = allRoles.map(r => ({ role: r, status: 'Active' }));
 
         const newUser = new User({
@@ -72,7 +75,7 @@ router.post('/login', async (req, res) => {
         const payload = { user: { id: user._id, roles: user.roles, userType: user.userType } };
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '10h' });
 
-        res.json({ token, user: { id: user._id, name: user.name, roles: user.roles, userType: user.userType } });
+        res.json({ token, user: { id: user._id, name: user.name, roles: user.roles, userType: user.userType, profilePic: user.profilePic } });
     } catch (err) {
         console.error(err);
         res.status(500).json({ msg: 'Server Error' });
@@ -95,6 +98,64 @@ router.post('/add-role', auth, async (req, res) => {
         await user.save();
 
         res.json({ roles: user.roles });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+// 4. Update Profile
+router.put('/update-profile', auth, async (req, res) => {
+    try {
+        const { name, email, location } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+
+        if (name) user.name = name;
+        if (email) user.email = email;
+        if (location) user.location = location;
+
+        await user.save();
+        res.json({ msg: 'Profile updated successfully', user: { name: user.name, email: user.email, location: user.location } });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// 5. Change Password
+router.put('/change-password', auth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) return res.status(400).json({ msg: 'Incorrect current password' });
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.json({ msg: 'Password securely updated' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+const upload = require('../middleware/upload');
+// 6. Upload Profile Picture
+router.post('/upload-profile-pic', [auth, upload.array('images', 1)], async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+
+        if (req.files && req.files.length > 0) {
+            user.profilePic = req.files[0].path;
+            await user.save();
+            res.json({ msg: 'Profile picture updated', profilePic: user.profilePic });
+        } else {
+            res.status(400).json({ msg: 'No image provided' });
+        }
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');

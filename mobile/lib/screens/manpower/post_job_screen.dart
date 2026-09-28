@@ -16,6 +16,7 @@ class PostJobScreen extends StatefulWidget {
 class _PostJobScreenState extends State<PostJobScreen> {
   final _formKey = GlobalKey<FormState>();
   
+  final _titleController = TextEditingController();
   final _companyController = TextEditingController();
   final _salaryController = TextEditingController();
   final _locationController = TextEditingController();
@@ -73,6 +74,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
 
     try {
       final payload = {
+        'title': _titleController.text,
         'company': _companyController.text,
         'category': _selectedCategory,
         'jobType': _selectedJobType,
@@ -162,9 +164,15 @@ class _PostJobScreenState extends State<PostJobScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Job Title *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Job Title is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _companyController,
-                decoration: const InputDecoration(labelText: 'Company / Your Name *', border: OutlineInputBorder()),
-                validator: (value) => value == null || value.trim().isEmpty ? 'Name is required' : null,
+                decoration: const InputDecoration(labelText: 'Company / Employer Name *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Company/Name is required' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(

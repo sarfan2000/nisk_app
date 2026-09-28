@@ -6,7 +6,7 @@ const UserSchema = new mongoose.Schema({
     email: { type: String, required: false },
     password: { type: String, required: true },
     roles: [{
-        role: { type: String, enum: ['Buyer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Admin'] },
+        role: { type: String, enum: ['Buyer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Admin', 'Delivery'] },
         status: { type: String, enum: ['Pending', 'Active', 'Rejected', 'Suspended'], default: 'Active' },
         appliedAt: { type: Date, default: Date.now }
     }],
@@ -21,6 +21,7 @@ const UserSchema = new mongoose.Schema({
     },
     isVerified: { type: Boolean, default: false },
     status: { type: String, default: 'Active' },
+    profilePic: { type: String, required: false },
     createdAt: { type: Date, default: Date.now }
 });
 

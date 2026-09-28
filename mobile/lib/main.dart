@@ -20,6 +20,9 @@ Future<void> main() async {
   );
 }
 
+final ValueNotifier<ThemeMode> globalThemeMode = ValueNotifier(ThemeMode.light);
+final ValueNotifier<String> globalLanguage = ValueNotifier('English');
+
 class NiskApp extends StatefulWidget {
   const NiskApp({super.key});
 
@@ -38,9 +41,15 @@ class _NiskAppState extends State<NiskApp> {
   }
 
   Future<void> _checkLoginStatus() async {
-    // Check if token exists in SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('x-auth-token');
+    
+    // Also load saved theme & language
+    final isDark = prefs.getBool('isDarkMode') ?? false;
+    globalThemeMode.value = isDark ? ThemeMode.dark : ThemeMode.light;
+    
+    final savedLang = prefs.getString('language') ?? 'English';
+    globalLanguage.value = savedLang;
     
     setState(() {
       _isLoggedIn = token != null && token.isNotEmpty;
@@ -50,25 +59,46 @@ class _NiskAppState extends State<NiskApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NISK App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B3B6F)), // Brand color
-        textTheme: GoogleFonts.poppinsTextTheme(),
-        useMaterial3: true,
-      ),
-      useInheritedMediaQuery: true,
-      locale: DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
-      // Core routing logic based on state
-      home: _isLoading 
-          ? const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF1B3B6F))))
-          : (_isLoggedIn ? const HomeScreen() : const LoginScreen()),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(),
-      },
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: globalThemeMode,
+      builder: (context, currentMode, _) {
+        return MaterialApp(
+          title: 'NISK App',
+          debugShowCheckedModeBanner: false,
+          themeMode: currentMode,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B3B6F), brightness: Brightness.light),
+            textTheme: GoogleFonts.poppinsTextTheme(),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+            ),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B3B6F), brightness: Brightness.dark),
+            scaffoldBackgroundColor: const Color(0xFF121212),
+            textTheme: GoogleFonts.poppinsTextTheme(ThemeData(brightness: Brightness.dark).textTheme),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1E1E1E),
+              foregroundColor: Colors.white,
+            ),
+            cardColor: const Color(0xFF1E1E1E),
+            useMaterial3: true,
+          ),
+          useInheritedMediaQuery: true,
+          locale: DevicePreview.locale(context),
+          builder: DevicePreview.appBuilder,
+          home: _isLoading 
+              ? const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF1B3B6F))))
+              : (_isLoggedIn ? const HomeScreen() : const LoginScreen()),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/home': (context) => const HomeScreen(),
+          },
+        );
+      }
     );
   }
 }
+

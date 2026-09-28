@@ -65,6 +65,21 @@ class ApiService {
       throw Exception('API PATCH Request failed: ${response.body}');
     }
   }
+
+  Future<dynamic> put(String endpoint, Map<String, dynamic> body) async {
+    final headers = await _getHeaders();
+    final response = await http.put(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: headers,
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('API PUT Request failed: ${response.body}');
+    }
+  }
   Future<dynamic> postMultipart(String endpoint, Map<String, String> body, List<dynamic> imageFiles) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('x-auth-token') ?? '';

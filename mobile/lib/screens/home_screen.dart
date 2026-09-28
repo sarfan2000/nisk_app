@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/education_dashboard.dart';
 import 'package:nisk_app/screens/manpower/manpower_dashboard.dart';
 import 'package:nisk_app/screens/products/products_dashboard.dart';
+import 'package:nisk_app/screens/cleaning/cleaning_dashboard.dart';
+import 'package:nisk_app/screens/admin/admin_dashboard.dart';
+import 'package:nisk_app/screens/delivery/delivery_dashboard.dart';
 import 'package:nisk_app/screens/notifications/notifications_screen.dart';
 import 'package:nisk_app/screens/search_screen.dart';
 import 'package:nisk_app/screens/messages/messages_screen.dart';
@@ -10,6 +13,8 @@ import 'package:nisk_app/services/api_service.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nisk_app/services/auth_service.dart';
+
+import 'package:nisk_app/main.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +29,16 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _userRoles = [];
   String _activeRole = 'Buyer';
   int _currentIndex = 0;
+
+  final Map<String, Widget> hubMapping = {
+    'Teacher': const EducationDashboard(),
+    'Student': const EducationDashboard(),
+    'Worker': const ManpowerDashboard(),
+    'Employer': const ManpowerDashboard(),
+    'Seller': const ProductsDashboard(),
+    'Admin': const AdminDashboard(),
+    'Delivery': const DeliveryDashboard(),
+  };
 
   @override
   void initState() {
@@ -43,6 +58,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchUnreadCount() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      bool isEnabled = prefs.getBool('notifications_enabled') ?? true;
+      
+      if (!isEnabled) {
+        if (mounted) setState(() => _unreadCount = 0);
+        return;
+      }
+
       final response = await _apiService.get('/notifications/me');
       if (response != null && mounted) {
         int count = 0;
@@ -60,39 +83,62 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _currentIndex == 0 ? _buildHomeAppBar() : null,
-      drawer: _currentIndex == 0 ? _buildRoleSwitcherDrawer() : null, // Only Drawer on Home
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildHomeContent(context),
-          const SearchScreen(),
-          const MessagesScreen(),
-          const ProfileScreen(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF1B3B6F),
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.message_outlined), label: 'Messages'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-      ),
+    return ValueListenableBuilder<String>(
+      valueListenable: globalLanguage,
+      builder: (context, lang, _) {
+        
+        String homeLabel = 'Home';
+        String searchLabel = 'Search';
+        String messagesLabel = 'Messages';
+        String profileLabel = 'Profile';
+
+        if (lang == 'Sinhala (සිංහල)') {
+          homeLabel = 'මුල් පිටුව';
+          searchLabel = 'සොයන්න';
+          messagesLabel = 'පණිවිඩ';
+          profileLabel = 'ගිණුම';
+        } else if (lang == 'Tamil (தமிழ்)') {
+          homeLabel = 'முகப்பு';
+          searchLabel = 'தேடல்';
+          messagesLabel = 'செய்திகள்';
+          profileLabel = 'கணக்கு';
+        }
+
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: _currentIndex == 0 ? _buildHomeAppBar() : null,
+          drawer: _currentIndex == 0 ? _buildRoleSwitcherDrawer() : null,
+          body: IndexedStack(
+            index: _currentIndex,
+            children: [
+              _buildHomeContent(context, lang),
+              const SearchScreen(),
+              const MessagesScreen(),
+              const ProfileScreen(),
+            ],
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            selectedItemColor: Theme.of(context).brightness == Brightness.dark ? Colors.blueAccent : const Color(0xFF1B3B6F),
+            unselectedItemColor: Colors.grey,
+            showUnselectedLabels: true,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            items: [
+              BottomNavigationBarItem(icon: const Icon(Icons.home), label: homeLabel),
+              BottomNavigationBarItem(icon: const Icon(Icons.search), label: searchLabel),
+              BottomNavigationBarItem(icon: const Icon(Icons.message_outlined), label: messagesLabel),
+              BottomNavigationBarItem(icon: const Icon(Icons.person_outline), label: profileLabel),
+            ],
+          ),
+        );
+      }
     );
   }
 
@@ -151,7 +197,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHomeContent(BuildContext context) {
+  Widget _buildHomeContent(BuildContext context, String lang) {
+    String title = 'One Platform.\nEndless Opportunities.';
+    String ed = 'EDUCATION ';
+    String edSub = 'Learn. Teach. Grow';
+    String mp = 'MANPOWER ';
+    String mpSub = 'Find Jobs. Hire Talent';
+    String pr = 'PRODUCTION & SALES ';
+    String prSub = 'Buy. Sell. Expand';
+
+    if (lang == 'Sinhala (සිංහල)') {
+      title = 'එක් වේදිකාවක්.\nනිමක් නැති අවස්ථා.';
+      ed = 'අධ්‍යාපනය';
+      edSub = 'ඉගෙනගන්න. උගන්වන්න.';
+      mp = 'ශ්‍රම බලකාය';
+      mpSub = 'රැකියා සොයන්න. බඳවා ගන්න.';
+      pr = 'නිෂ්පාදන සහ විකුණුම්';
+      prSub = 'මිලදී ගන්න. විකුණන්න.';
+    } else if (lang == 'Tamil (தமிழ்)') {
+      title = 'ஒரு தளம்.\nமுடிவற்ற வாய்ப்புகள்.';
+      ed = 'கல்வி';
+      edSub = 'கற்றுக்கொள். கற்பி.';
+      mp = 'மனிதவளம்';
+      mpSub = 'வேலை தேடு. வேலை கொடு.';
+      pr = 'உற்பத்தி மற்றும் விற்பனை';
+      prSub = 'வாங்கு. விற்க.';
+    }
+
     return SingleChildScrollView(
       child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -167,11 +239,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'NISK Manpower Consultant (PVT) Ltd.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.black87,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
@@ -194,49 +266,77 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              const Text(
-                'One Platform.\nEndless Opportunities.',
+              Text(
+                title,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: Colors.black87,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                   height: 1.3,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              _buildLargeSectorButton(
-                context,
-                title: 'EDUCATION ',
-                subtitle: 'Learn. Teach. Grow',
-                color: const Color(0xFFBA1A1A),
-                icon: Icons.school,
-                onTap: () {
-                   Navigator.push(context, MaterialPageRoute(builder: (context) => const EducationDashboard()));
-                }
-              ),
-              const SizedBox(height: 14),
-              _buildLargeSectorButton(
-                context,
-                title: 'MANPOWER ',
-                subtitle: 'Find Jobs. Hire Talent',
-                color: const Color(0xFFF1C40F),
-                icon: Icons.groups,
-                onTap: () {
-                   Navigator.push(context, MaterialPageRoute(builder: (context) => const ManpowerDashboard()));
-                }
-              ),
-              const SizedBox(height: 14),
-              _buildLargeSectorButton(
-                context,
-                title: 'PRODUCTION & SALES ',
-                subtitle: 'Buy. Sell. Expand',
-                color: const Color(0xFF278E33),
-                icon: Icons.shopping_cart,
-                onTap: () {
-                   Navigator.push(context, MaterialPageRoute(builder: (context) => const ProductsDashboard()));
-                }
-              ),
+              if (!['Delivery', 'Admin'].contains(_activeRole)) ...[
+                _buildLargeSectorButton(
+                  context,
+                  title: ed,
+                  subtitle: edSub,
+                  color: const Color(0xFFBA1A1A),
+                  icon: Icons.school,
+                  onTap: () {
+                     Navigator.push(context, MaterialPageRoute(builder: (context) => const EducationDashboard()));
+                  }
+                ),
+                const SizedBox(height: 14),
+                _buildLargeSectorButton(
+                  context,
+                  title: mp,
+                  subtitle: mpSub,
+                  color: const Color(0xFFF1C40F),
+                  icon: Icons.groups,
+                  onTap: () {
+                     Navigator.push(context, MaterialPageRoute(builder: (context) => const ManpowerDashboard()));
+                  }
+                ),
+                const SizedBox(height: 14),
+                _buildLargeSectorButton(
+                  context,
+                  title: pr,
+                  subtitle: prSub,
+                  color: const Color(0xFF278E33),
+                  icon: Icons.shopping_cart,
+                  onTap: () {
+                     Navigator.push(context, MaterialPageRoute(builder: (context) => const ProductsDashboard()));
+                  }
+                ),
+              ],
+              if (_activeRole == 'Admin') ...[
+                const SizedBox(height: 14),
+                _buildLargeSectorButton(
+                  context,
+                  title: 'ADMINISTRATION',
+                  subtitle: 'Manage System',
+                  color: Colors.blueGrey,
+                  icon: Icons.security,
+                  onTap: () {
+                     Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
+                  }
+                ),
+              ],
+              if (_activeRole == 'Delivery') ...[
+                const SizedBox(height: 14),
+                _buildLargeSectorButton(
+                  context,
+                  title: 'DELIVERY HUB',
+                  subtitle: 'Rider Portal',
+                  color: Colors.teal,
+                  icon: Icons.local_shipping,
+                  onTap: () {
+                     Navigator.push(context, MaterialPageRoute(builder: (context) => const DeliveryDashboard()));
+                  }
+                ),
+              ],
               const SizedBox(height: 24),
             ],
           ),
@@ -371,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAddRoleModal(BuildContext context) {
-    final allPossibleRoles = ['Buyer', 'Seller', 'Worker', 'Employer', 'Teacher', 'Student'];
+    final allPossibleRoles = ['Buyer', 'Seller', 'Worker', 'Employer', 'Teacher', 'Student', 'Delivery'];
     final existingRoleNames = _userRoles.map((r) => r['role'].toString()).toList();
     final missingRoles = allPossibleRoles.where((r) => !existingRoleNames.contains(r)).toList();
 

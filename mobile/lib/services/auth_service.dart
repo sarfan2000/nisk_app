@@ -40,6 +40,7 @@ class AuthService {
         await prefs.setString('userType', data['user']['userType'] ?? 'Buyer'); // Legacy support
         await prefs.setString('roles', jsonEncode(roles));
         await prefs.setString('activeRole', activeRole);
+        await prefs.setString('profilePic', data['user']['profilePic'] ?? '');
 
         return User.fromJson(data['user'], token);
       } else {

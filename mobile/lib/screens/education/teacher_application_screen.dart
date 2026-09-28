@@ -14,6 +14,7 @@ class TeacherApplicationScreen extends StatefulWidget {
 }
 
 class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _experienceController = TextEditingController();
   final _descController = TextEditingController();
   final _daysController = TextEditingController();
@@ -49,20 +50,7 @@ class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
   }
 
   Future<void> _submitApplication() async {
-    if (_experienceController.text.trim().isEmpty ||
-        _descController.text.trim().isEmpty ||
-        _daysController.text.trim().isEmpty ||
-        _timeController.text.trim().isEmpty ||
-        _subjectController.text.trim().isEmpty ||
-        _gradeController.text.trim().isEmpty ||
-        _locationController.text.trim().isEmpty ||
-        _rateController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill all required fields before saving.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
@@ -118,68 +106,105 @@ class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
         backgroundColor: Colors.redAccent,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: Center(
-                child: Container(
-                  height: 120,
-                  width: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
+                child: Center(
+                  child: Container(
+                    height: 120,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
+                    ),
+                    child: _profilePicture == null
+                        ? const Icon(Icons.add_a_photo, size: 40, color: Colors.grey)
+                        : ClipOval(
+                            child: kIsWeb && _webImageBytes != null
+                                ? Image.memory(_webImageBytes!, fit: BoxFit.cover)
+                                : !kIsWeb 
+                                    ? Image.file(File(_profilePicture!.path), fit: BoxFit.cover)
+                                    : const Icon(Icons.broken_image),
+                          ),
                   ),
-                  child: _profilePicture == null
-                      ? const Icon(Icons.add_a_photo, size: 40, color: Colors.grey)
-                      : ClipOval(
-                          child: kIsWeb && _webImageBytes != null
-                              ? Image.memory(_webImageBytes!, fit: BoxFit.cover)
-                              : !kIsWeb 
-                                  ? Image.file(File(_profilePicture!.path), fit: BoxFit.cover)
-                                  : const Icon(Icons.broken_image),
-                        ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Center(child: Text('Profile Picture', style: TextStyle(color: Colors.grey))),
-            const SizedBox(height: 24),
-            TextField(controller: _experienceController, decoration: const InputDecoration(labelText: 'Experience (e.g. 8 Years)', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: _descController, decoration: const InputDecoration(labelText: 'Short Description', border: OutlineInputBorder()), maxLines: 3),
-            const SizedBox(height: 16),
-            TextField(controller: _daysController, decoration: const InputDecoration(labelText: 'Available Days (e.g. Mon, Wed, Fri)', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: _timeController, decoration: const InputDecoration(labelText: 'Available Time (e.g. 4 PM - 6 PM)', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: _subjectController, decoration: const InputDecoration(labelText: 'Subject (e.g. Mathematics)', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: _gradeController, decoration: const InputDecoration(labelText: 'Grade (e.g. Grade 10)', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: _locationController, decoration: const InputDecoration(labelText: 'City/Location', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedMode,
-              decoration: const InputDecoration(labelText: 'Teaching Mode', border: OutlineInputBorder()),
-              items: ['Online', 'Offline', 'Both'].map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-              onChanged: (val) => setState(() => _selectedMode = val ?? 'Online'),
-            ),
-            const SizedBox(height: 16),
-            TextField(controller: _rateController, decoration: const InputDecoration(labelText: 'Hourly Rate (e.g. 1500)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _isSubmitting ? null : _submitApplication,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: _isSubmitting 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('SUBMIT APPLICATION', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            )
-          ],
+              const SizedBox(height: 8),
+              const Center(child: Text('Profile Picture', style: TextStyle(color: Colors.grey))),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _experienceController, 
+                decoration: const InputDecoration(labelText: 'Experience (e.g. 8 Years) *', border: OutlineInputBorder()),
+                validator: (val) => val == null || val.isEmpty ? 'Experience is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descController, 
+                decoration: const InputDecoration(labelText: 'Short Description *', border: OutlineInputBorder()), 
+                maxLines: 3,
+                validator: (val) => val == null || val.isEmpty ? 'Description is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _daysController, 
+                decoration: const InputDecoration(labelText: 'Available Days (e.g. Mon, Wed, Fri) *', border: OutlineInputBorder()),
+                validator: (val) => val == null || val.isEmpty ? 'Available Days req.' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _timeController, 
+                decoration: const InputDecoration(labelText: 'Available Time (e.g. 4 PM - 6 PM) *', border: OutlineInputBorder()),
+                validator: (val) => val == null || val.isEmpty ? 'Available Time req.' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _subjectController, 
+                decoration: const InputDecoration(labelText: 'Subject (e.g. Mathematics) *', border: OutlineInputBorder()),
+                validator: (val) => val == null || val.isEmpty ? 'Subject is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _gradeController, 
+                decoration: const InputDecoration(labelText: 'Grade (e.g. Grade 10) *', border: OutlineInputBorder()),
+                validator: (val) => val == null || val.isEmpty ? 'Grade is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _locationController, 
+                decoration: const InputDecoration(labelText: 'City/Location *', border: OutlineInputBorder()),
+                validator: (val) => val == null || val.isEmpty ? 'City/Location is required' : null,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedMode,
+                decoration: const InputDecoration(labelText: 'Teaching Mode *', border: OutlineInputBorder()),
+                items: ['Online', 'Offline', 'Both'].map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+                onChanged: (val) => setState(() => _selectedMode = val ?? 'Online'),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _rateController, 
+                decoration: const InputDecoration(labelText: 'Hourly Rate (e.g. 1500) *', border: OutlineInputBorder()), 
+                keyboardType: TextInputType.number,
+                validator: (val) => val == null || val.isEmpty ? 'Hourly Rate is required' : null,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitApplication,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                child: _isSubmitting 
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('SUBMIT APPLICATION', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              )
+            ],
+          ),
         ),
       ),
     );

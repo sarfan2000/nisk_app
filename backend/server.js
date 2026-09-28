@@ -46,6 +46,7 @@ const adminRoutes = require('./routes/admin');
 const operationsRoutes = require('./routes/operations');
 const searchRoutes = require('./routes/search');
 const paymentRoutes = require('./routes/payment');
+const deliveryRoutes = require('./routes/delivery');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
@@ -60,6 +61,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/operations', operationsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/delivery', deliveryRoutes);
 
 // Swagger Documentation Schema
 const swaggerOptions = {

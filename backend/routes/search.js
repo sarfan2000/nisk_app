@@ -19,24 +19,24 @@ router.get('/', async (req, res) => {
 
         if (searchString) {
             // Find Teachers
+            const TeacherProfile = require('../models/TeacherProfile');
+            // search by subject/name in teacher profile if possible, but let's query Users first
             results.teachers = await User.find({
-                userType: 'Teacher',
-                name: searchString,
-                isVerified: true,
-                status: 'Active'
-            }).select('name location rating');
+                $or: [{ name: searchString }, { location: searchString }, { userType: searchString }],
+                'roles.role': 'Teacher'
+            }).select('name location userType');
 
             // Find Jobs
             results.jobs = await Job.find({
-                title: searchString,
+                $or: [{ title: searchString }, { category: searchString }, { company: searchString }],
                 isActive: true
-            }).select('title company location salary');
+            }).select('title company location salary category');
 
             // Find Products
             results.products = await Product.find({
-                name: searchString,
-                isApproved: true
-            }).select('name price stock rating');
+                $or: [{ name: searchString }, { category: searchString }],
+                // isApproved check removed so user can immediately search what they posted!
+            }).select('name price stock category');
         }
 
         res.json(results);

@@ -41,9 +41,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
   }
 
+  final _formKey = GlobalKey<FormState>();
+
   Future<void> _submitProduct() async {
-    if (_nameController.text.isEmpty || _priceController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name and Price are required.')));
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
@@ -87,115 +88,141 @@ class _AddProductScreenState extends State<AddProductScreen> {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
-                ),
-                child: _selectedImages.isEmpty 
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text('Tap to select Product Images', style: TextStyle(color: Colors.grey)),
-                      ],
-                    )
-                  : ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _selectedImages.length,
-                      itemBuilder: (context, index) {
-                        final file = _selectedImages[index];
-                        return Stack(
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.all(8.0),
-                              width: 130,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                image: DecorationImage(
-                                  // For web we use network, for native we use File
-                                  image: kIsWeb ? NetworkImage(file.path) : FileImage(File(file.path)) as ImageProvider,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              child: kIsWeb ? FutureBuilder(
-                                future: file.readAsBytes(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.hasData) {
-                                    return ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.memory(snapshot.data as dynamic, fit: BoxFit.cover),
-                                    );
-                                  }
-                                  return const Center(child: CircularProgressIndicator());
-                                }
-                              ) : null,
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: GestureDetector(
-                                onTap: () => _removeImage(index),
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
+                  ),
+                  child: _selectedImages.isEmpty 
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                          SizedBox(height: 8),
+                          Text('Tap to select Product Images', style: TextStyle(color: Colors.grey)),
+                        ],
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _selectedImages.length,
+                        itemBuilder: (context, index) {
+                          final file = _selectedImages[index];
+                          return Stack(
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.all(8.0),
+                                width: 130,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  image: DecorationImage(
+                                    // For web we use network, for native we use File
+                                    image: kIsWeb ? NetworkImage(file.path) : FileImage(File(file.path)) as ImageProvider,
+                                    fit: BoxFit.cover,
                                   ),
-                                  child: const Icon(Icons.close, size: 16, color: Colors.red),
                                 ),
+                                child: kIsWeb ? FutureBuilder(
+                                  future: file.readAsBytes(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.memory(snapshot.data as dynamic, fit: BoxFit.cover),
+                                      );
+                                    }
+                                    return const Center(child: CircularProgressIndicator());
+                                  }
+                                ) : null,
                               ),
-                            )
-                          ],
-                        );
-                      }
-                    ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: GestureDetector(
+                                  onTap: () => _removeImage(index),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close, size: 16, color: Colors.red),
+                                  ),
+                                ),
+                              )
+                            ],
+                          );
+                        }
+                      ),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Product Name', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: _categoryController, decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descController,
-              decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: TextField(controller: _priceController, decoration: const InputDecoration(labelText: 'Price (LKR)', border: OutlineInputBorder()), keyboardType: TextInputType.number)),
-                const SizedBox(width: 16),
-                Expanded(child: TextField(controller: _stockController, decoration: const InputDecoration(labelText: 'Stock Qty', border: OutlineInputBorder()), keyboardType: TextInputType.number)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Delivery Available'),
-              value: _deliveryAvailable,
-              onChanged: (val) { setState(() { _deliveryAvailable = val; }); },
-              activeColor: Colors.green,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _isSubmitting ? null : _submitProduct,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: _isSubmitting 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('PUBLISH PRODUCT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            )
-          ],
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _nameController, 
+                decoration: const InputDecoration(labelText: 'Product Name *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Product Name is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _categoryController, 
+                decoration: const InputDecoration(labelText: 'Category *', border: OutlineInputBorder()),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Category is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descController,
+                decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _priceController, 
+                      decoration: const InputDecoration(labelText: 'Price (LKR) *', border: OutlineInputBorder()), 
+                      keyboardType: TextInputType.number,
+                      validator: (value) => value == null || double.tryParse(value) == null ? 'Valid Price req.' : null,
+                    )
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _stockController, 
+                      decoration: const InputDecoration(labelText: 'Stock Qty *', border: OutlineInputBorder()), 
+                      keyboardType: TextInputType.number,
+                      validator: (value) => value == null || int.tryParse(value) == null ? 'Valid Qty req.' : null,
+                    )
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                title: const Text('Delivery Available'),
+                value: _deliveryAvailable,
+                onChanged: (val) { setState(() { _deliveryAvailable = val; }); },
+                activeColor: Colors.green,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitProduct,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                child: _isSubmitting 
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('PUBLISH PRODUCT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              )
+            ],
+          ),
         ),
       ),
     );

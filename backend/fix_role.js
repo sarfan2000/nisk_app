@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); mongoose.connect('mongodb://127.0.0.1:27017/nisk_app').then(async () => { const User = require('./models/User'); await User.updateMany({}, { $addToSet: { roles: { role: 'Delivery', status: 'Active' } } }); console.log('Fixed completely'); process.exit(); });

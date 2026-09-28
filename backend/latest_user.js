@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); mongoose.connect('mongodb://127.0.0.1:27017/nisk_app').then(async () => { const User = require('./models/User'); const u = await User.findOne().sort({createdAt: -1}); console.log(JSON.stringify(u.roles.map(r => r.role))); console.log(u.userType); process.exit(); });

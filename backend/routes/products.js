@@ -48,7 +48,7 @@ router.patch('/verify/:productId', [auth, role(['Admin', 'Super Admin'])], async
 // 2. Browse Products (Customer)
 router.get('/', async (req, res) => {
     try {
-        const products = await Product.find({ isApproved: true, stock: { $gt: 0 } }).populate('seller', 'name location');
+        const products = await Product.find({ stock: { $gt: 0 } }).populate('seller', 'name location');
         res.json(products);
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
@@ -130,9 +130,38 @@ router.patch('/orders/:orderId/status', [auth, role(['Seller'])], async (req, re
             { orderId: req.params.orderId, product: { $in: productIds } },
             { orderStatus },
             { new: true }
-        );
+        ).populate('product');
+
+        if (order) {
+            const Notification = require('../models/Notification');
+            const notify = new Notification({
+                user: order.customer,
+                title: 'Order Tracking Update',
+                message: `Your product '${order.product.name}' is now marked as: ${orderStatus}.`,
+                type: 'Alert'
+            });
+            await notify.save();
+
+            if (orderStatus === 'Packed') {
+                const User = require('../models/User');
+                // Fix: 'roles' is an array of objects, must query 'roles.role'
+                const deliveryBoys = await User.find({ 'roles.role': 'Delivery' });
+
+                if (deliveryBoys.length > 0) {
+                    const deliveryNotifs = deliveryBoys.map(boy => ({
+                        user: boy._id,
+                        title: 'New Delivery Available!',
+                        message: `A new package ('${order.product.name}') is packed and ready for pickup!`,
+                        type: 'Alert'
+                    }));
+                    await Notification.insertMany(deliveryNotifs);
+                }
+            }
+        }
+
         res.json(order);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
 });

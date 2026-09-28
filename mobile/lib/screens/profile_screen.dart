@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
+import 'package:nisk_app/screens/settings_screen.dart';
+import 'package:nisk_app/screens/profile_editor_screens.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,6 +16,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String _activeRole = 'Loading...';
   String _name = 'User Profile'; // Ideally fetch from DB
+  String? _profilePic;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -23,8 +29,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _activeRole = prefs.getString('activeRole') ?? 'Buyer';
-      // If you stored user name in shared preferences, load it here.
+      _profilePic = prefs.getString('profilePic');
+      if (_profilePic != null && _profilePic!.isEmpty) _profilePic = null;
     });
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+
+    if (pickedFile != null) {
+       setState(() => _isUploading = true);
+       try {
+         final response = await ApiService().postMultipart(
+           '/auth/upload-profile-pic',
+           {},
+           [pickedFile]
+         );
+
+         String newPic = response['profilePic'];
+         final prefs = await SharedPreferences.getInstance();
+         await prefs.setString('profilePic', newPic);
+
+         setState(() {
+            _profilePic = newPic;
+            _isUploading = false;
+         });
+         
+         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile picture updated successfully!')));
+       } catch (e) {
+         setState(() => _isUploading = false);
+         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload picture: $e')));
+       }
+    }
+  }
+
+  String? _getImageUrl(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    // Strip "/api" from API base URL to point to root uploads dir
+    String baseUrl = ApiService.baseUrl.replaceAll('/api', '');
+    return '$baseUrl/${path.replaceAll('\\', '/')}';
   }
 
   @override
@@ -45,10 +90,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.only(bottom: 30, top: 20),
               child: Column(
                 children: [
-                  const CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, size: 60, color: Color(0xFF1B3B6F)),
+                  GestureDetector(
+                    onTap: _pickAndUploadImage,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.white,
+                          backgroundImage: _getImageUrl(_profilePic) != null
+                              ? NetworkImage(_getImageUrl(_profilePic)!)
+                              : null,
+                          child: _getImageUrl(_profilePic) == null
+                              ? const Icon(Icons.person, size: 60, color: Color(0xFF1B3B6F))
+                              : null,
+                        ),
+                        if (_isUploading)
+                          const Positioned.fill(child: CircularProgressIndicator(color: Colors.white)),
+                        if (!_isUploading)
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                          )
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -71,8 +137,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            _buildProfileOption(context, Icons.settings, 'Account Settings', () {}),
-            _buildProfileOption(context, Icons.security, 'Privacy & Security', () {}),
+            _buildProfileOption(context, Icons.settings, 'Account Settings', () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+            }),
+            _buildProfileOption(context, Icons.security, 'Privacy & Security', () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ChangePasswordScreen()));
+            }),
             _buildProfileOption(context, Icons.help_outline, 'Help & Support', () {}),
             const Divider(height: 40),
             ListTile(

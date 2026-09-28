@@ -10,6 +10,7 @@ const ProductOrderSchema = new mongoose.Schema({
     subtotal: { type: Number, required: true },
     deliveryFee: { type: Number, default: 0 },
     total: { type: Number, required: true },
+    deliveryBoy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     paymentStatus: { type: String, enum: ['Pending', 'Confirmed', 'Processing', 'Paid'], default: 'Pending' },
     orderStatus: {
         type: String,
