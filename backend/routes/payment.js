@@ -136,6 +136,13 @@ router.post('/webhook', async (req, res) => {
             } else if (order_id.startsWith('PR')) {
                 const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
                 if (pOrder) {
+                    const Product = require('../models/Product');
+                    const productObj = await Product.findById(pOrder.product);
+                    if (productObj) {
+                        productObj.stock -= pOrder.quantity;
+                        await productObj.save();
+                    }
+
                     const notify = new Notification({
                         user: pOrder.customer,
                         title: 'Payment Successful',
@@ -172,7 +179,15 @@ router.get('/success', async (req, res) => {
         if (order_id.startsWith('BK')) {
             await Booking.findOneAndUpdate({ bookingId: order_id }, { paymentStatus: 'Completed' }, { new: true });
         } else if (order_id.startsWith('PR')) {
-            await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+            const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+            if (pOrder) {
+                const Product = require('../models/Product');
+                const productObj = await Product.findById(pOrder.product);
+                if (productObj) {
+                    productObj.stock -= pOrder.quantity;
+                    await productObj.save();
+                }
+            }
         } else if (order_id.startsWith('MP')) {
             await ManpowerBooking.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Completed' }, { new: true });
         }

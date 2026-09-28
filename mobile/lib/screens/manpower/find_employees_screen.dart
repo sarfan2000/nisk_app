@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:nisk_app/screens/manpower/worker_details_screen.dart';
 import 'package:nisk_app/services/api_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:nisk_app/screens/manpower/manpower_checkout_screen.dart';
 
 class FindEmployeesScreen extends StatefulWidget {
   const FindEmployeesScreen({super.key});
@@ -11,13 +10,9 @@ class FindEmployeesScreen extends StatefulWidget {
 }
 
 class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
-  int _currentStep = 0;
-
   String? _selectedCategory;
   String? _selectedLocation;
-  Map<String, dynamic>? _selectedEmployee;
-  int _numberOfDays = 1;
-
+  
   List<String> _categories = [];
   List<String> _locations = [];
   List<dynamic> _employees = [];
@@ -29,6 +24,7 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
   void initState() {
     super.initState();
     _fetchFilters();
+    _fetchFilteredEmployees();
   }
 
   Future<void> _fetchFilters() async {
@@ -68,237 +64,199 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load employees: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load workers: $e')));
       }
     }
   }
 
-  void _showCheckoutDialog() {
-    double rate = 2000.0;
-    if (_selectedEmployee != null && _selectedEmployee!['salary'] != null) {
-      final s = _selectedEmployee!['salary'].toString().replaceAll(RegExp(r'[^0-9.]'), '');
-      if (s.isNotEmpty) rate = double.tryParse(s) ?? 2000.0;
-    }
-    String empName = _selectedEmployee != null ? (_selectedEmployee!['company'] ?? 'Professional') : 'Unknown';
-    
-    double subtotal = rate * _numberOfDays;
-    double serviceCharge = subtotal * 0.10;
-    double grandTotal = subtotal + serviceCharge;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ORDER SUMMARY', style: TextStyle(color: Colors.orange)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Service: $_selectedCategory'),
-            Text('Location: $_selectedLocation'),
-            Text('Professional: $empName'),
-            const Divider(),
-            Text('Days: $_numberOfDays'),
-            Text('Rate: LKR $rate'),
-            Text('Subtotal: LKR $subtotal'),
-            Text('Service Charge (10%): LKR $serviceCharge'),
-            const Divider(),
-            Text('Total Amount: LKR $grandTotal', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-               Navigator.pop(context);
-               Navigator.push(context, MaterialPageRoute(builder: (context) => ManpowerCheckoutScreen(
-                 bookingDetails: {
-                   'category': _selectedCategory,
-                   'location': _selectedLocation,
-                   'professional': empName,
-                   'workerId': _selectedEmployee!['employer'] != null 
-                             ? (_selectedEmployee!['employer']['_id'] ?? _selectedEmployee!['_id']) 
-                             : _selectedEmployee!['_id'],
-                   'days': _numberOfDays,
-                   'rate': rate,
-                   'subtotal': subtotal,
-                   'serviceCharge': serviceCharge,
-                   'total': grandTotal
-                 }
-               )));
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
-            child: const Text('PROCEED TO PAYMENT'),
+  void _onFilterChanged() {
+    _fetchFilters();
+    _fetchFilteredEmployees();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        title: const Text('Hire Professionals'),
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          // Filter Section
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildDropdown('Category', _selectedCategory, _categories, (val) {
+                    setState(() { _selectedCategory = val; _selectedLocation = null; });
+                    _onFilterChanged();
+                  }),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDropdown('Location (District)', _selectedLocation, _locations, (val) {
+                    setState(() => _selectedLocation = val);
+                    _onFilterChanged();
+                  }),
+                ),
+              ],
+            ),
+          ),
+          
+          // Worker List Section
+          Expanded(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+              : _employees.isEmpty 
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.search_off, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text('No professionals found matching these filters', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _employees.length,
+                      itemBuilder: (context, index) {
+                        return _buildWorkerCard(_employees[index]);
+                      },
+                    ),
           )
         ],
       ),
     );
   }
 
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Find Workers'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+  Widget _buildDropdown(String hint, String? value, List<String> items, Function(String?) onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300)
       ),
-      body: Stepper(
-        currentStep: _currentStep,
-        onStepContinue: () {
-          if (_currentStep == 0 && _selectedCategory == null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a Service Category')));
-            return;
-          }
-          if (_currentStep == 1 && (_selectedLocation == null || _selectedLocation!.isEmpty)) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a Location')));
-            return;
-          }
-          if (_currentStep == 1) {
-             _fetchFilteredEmployees();
-          }
-          if (_currentStep == 2 && _selectedEmployee == null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a Professional!')));
-            return;
-          }
-          if (_currentStep < 3) {
-            setState(() => _currentStep += 1);
-          } else {
-            _showCheckoutDialog();
-          }
-        },
-        onStepCancel: () {
-          if (_currentStep > 0) {
-            setState(() => _currentStep -= 1);
-          }
-        },
-        steps: [
-          Step(
-            title: const Text('Service Category'),
-            content: DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedCategory = val;
-                  _selectedLocation = null;
-                });
-                _fetchFilters();
-              },
-              decoration: const InputDecoration(labelText: 'Select Service (e.g. Plumber)', border: OutlineInputBorder()),
-            ),
-            isActive: _currentStep >= 0,
-          ),
-          Step(
-            title: const Text('Location'),
-            content: DropdownButtonFormField<String>(
-              value: _selectedLocation,
-              items: _locations.map((loc) => DropdownMenuItem(value: loc, child: Text(loc))).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedLocation = val;
-                });
-              },
-              decoration: const InputDecoration(labelText: 'Select City/Area', border: OutlineInputBorder()),
-            ),
-            isActive: _currentStep >= 1,
-          ),
-          Step(
-            title: const Text('Select Worker'),
-            content: _isLoading 
-                ? const Center(child: CircularProgressIndicator()) 
-                 : _employees.isEmpty 
-                    ? const Text('No workers found for your criteria.')
-                    : Column(
-                        children: _employees.map((e) {
-                          final name = e['company'] ?? 'Independent';
-                          final rate = e['salary'] ?? 'Negotiable';
-                          final isAvailable = e['isAvailable'] ?? true;
-                          
-                          String? imageUrl;
-                          if (e['jobPicture'] != null && e['jobPicture'].toString().isNotEmpty) {
-                            String rawPath = e['jobPicture'].toString();
-                            rawPath = rawPath.replaceAll('\\', '/');
-                            String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
-                            if (!rawPath.startsWith('/')) rawPath = '/$rawPath';
-                            imageUrl = '$base$rawPath';
-                          }
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: Text(hint, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+          value: items.contains(value) ? value : null,
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+          onChanged: onChanged,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.orange),
+        ),
+      ),
+    );
+  }
 
-                          return Card(
-                            color: (_selectedEmployee != null && _selectedEmployee!['_id'] == e['_id']) ? Colors.orange.shade50 : Colors.white,
-                            margin: const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: !isAvailable
-                                    ? Colors.grey.shade300
-                                    : (_selectedEmployee != null && _selectedEmployee!['_id'] == e['_id']) 
-                                        ? Colors.orange 
-                                        : Colors.grey.shade300,
-                                width: (_selectedEmployee != null && _selectedEmployee!['_id'] == e['_id']) ? 2 : 1,
-                              ),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(12),
-                              enabled: isAvailable,
-                              leading: Container(
-                                width: 50, height: 50,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: Colors.grey.shade200,
-                                ),
-                                child: imageUrl != null 
-                                  ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(imageUrl, fit: BoxFit.cover))
-                                  : const Icon(Icons.person, color: Colors.grey),
-                              ),
-                              title: Row(
-                                children: [
-                                  Text(name, style: TextStyle(fontWeight: FontWeight.bold, color: isAvailable ? Colors.black : Colors.grey)),
-                                  if (e['isVerified'] == true) ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.verified, color: Colors.blue, size: 16)
-                                  ],
-                                  if (!isAvailable) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
-                                      child: const Text('UNAVAILABLE', style: TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.bold)),
-                                    )
-                                  ]
-                                ],
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text('${e['category']} • Rate: $rate\nLocation: ${e['location'] != null ? e['location']['city'] : 'Unknown'}',
-                                    style: TextStyle(color: isAvailable ? Colors.black87 : Colors.grey),
-                                  ),
-                                ],
-                              ),
-                              onTap: isAvailable ? () {
-                                setState(() => _selectedEmployee = e);
-                              } : null,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-            isActive: _currentStep >= 2,
-          ),
-          Step(
-            title: const Text('Booking Details'),
-            content:Row(
-              children: [
-                const Text('Number of Days/Units: ', style: TextStyle(fontSize: 16)),
-                const Spacer(),
-                IconButton(icon: const Icon(Icons.remove, color: Colors.orange), onPressed: () => setState(() { if(_numberOfDays>1) _numberOfDays--;})),
-                Text('$_numberOfDays', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(icon: const Icon(Icons.add, color: Colors.orange), onPressed: () => setState(() => _numberOfDays++)),
-              ],
+  Widget _buildWorkerCard(Map<String, dynamic> e) {
+    final name = e['company'] ?? 'Independent Professional';
+    final title = e['title'] ?? 'Worker';
+    final rate = e['salary'] ?? 'Negotiable';
+    final isAvailable = e['isAvailable'] ?? true;
+    final locationName = e['location'] != null ? e['location']['city'] ?? 'Unknown' : 'Unknown';
+    
+    String? imageUrl;
+    if (e['jobPicture'] != null && e['jobPicture'].toString().isNotEmpty) {
+      String rawPath = e['jobPicture'].toString();
+      rawPath = rawPath.replaceAll('\\', '/');
+      String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
+      if (!rawPath.startsWith('/')) rawPath = '/$rawPath';
+      imageUrl = '$base$rawPath';
+    }
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: isAvailable ? Colors.transparent : Colors.grey.shade300)
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: isAvailable ? () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkerDetailsScreen(
+                worker: e,
+                imageUrl: imageUrl,
+                selectedCategory: _selectedCategory ?? e['category'],
+                selectedLocation: _selectedLocation ?? locationName,
+              )
             ),
-            isActive: _currentStep >= 3,
-          )
-        ],
+          );
+        } : null,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Hero(
+                tag: 'worker_${e['_id']}',
+                child: Container(
+                  width: 70, height: 70,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey.shade200,
+                    image: imageUrl != null ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover) : null,
+                  ),
+                  child: imageUrl == null ? const Icon(Icons.work, color: Colors.grey) : null,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isAvailable ? Colors.black : Colors.grey), maxLines: 1)),
+                        if (e['isVerified'] == true) const Icon(Icons.verified, color: Colors.blue, size: 18)
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(20)),
+                      child: Text(rate, style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                    )
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 12, height: 12,
+                    decoration: BoxDecoration(
+                      color: isAvailable ? Colors.green : Colors.red,
+                      shape: BoxShape.circle
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (locationName.isNotEmpty) Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                      const SizedBox(width: 2),
+                      Text(locationName, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                    ],
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
       ),
     );
   }

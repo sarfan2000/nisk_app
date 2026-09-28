@@ -31,7 +31,7 @@ router.get('/filters', async (req, res) => {
         if (req.query.location) match.location = new RegExp(req.query.location, 'i');
         if (req.query.grade) match.grades = { $in: [req.query.grade] };
 
-        const profiles = await TeacherProfile.find(match);
+        const profiles = await TeacherProfile.find(match).populate('user', 'location');
 
         const locations = new Set();
         const grades = new Set();
@@ -39,6 +39,8 @@ router.get('/filters', async (req, res) => {
 
         profiles.forEach(p => {
             if (p.location) locations.add(p.location);
+            else if (p.user && p.user.location) locations.add(p.user.location);
+
             if (p.grades) p.grades.forEach(g => grades.add(g));
             if (p.subjects) p.subjects.forEach(s => subjects.add(s));
         });

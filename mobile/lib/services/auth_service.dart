@@ -23,11 +23,15 @@ class AuthService {
         final String token = data['token'];
         // Extract roles
         List<dynamic> roles = data['user']['roles'] ?? [];
-        String activeRole = 'Buyer'; // Default active role
+        // Prefer what they actually registered as (userType)
+        String activeRole = data['user']['userType'] ?? 'Buyer'; 
+        
+        // Ensure their chosen userType is actually in their roles array, otherwise fallback
         if (roles.isNotEmpty) {
-           // Default to their primary active role if it's not simply Buyer
-           var primaryRole = roles.firstWhere((r) => r['role'] != 'Buyer' && r['status'] == 'Active', orElse: () => roles[0]);
-           activeRole = primaryRole['role'];
+           bool hasRegisteredRole = roles.any((r) => r['role'] == activeRole && r['status'] == 'Active');
+           if (!hasRegisteredRole) {
+               activeRole = roles.first['role'];
+           }
         }
 
         // Persist token and roles securely

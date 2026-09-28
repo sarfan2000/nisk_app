@@ -84,10 +84,6 @@ router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req
 
         await order.save();
 
-        // Deduct Stock
-        product.stock -= quantity;
-        await product.save();
-
         res.status(201).json({ msg: 'Order placed successfully', order, paymentUrl: `/api/payment/checkout/${orderId}` });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
@@ -114,7 +110,7 @@ router.get('/seller-orders', [auth, role(['Seller'])], async (req, res) => {
 
         const orders = await ProductOrder.find({ product: { $in: productIds } })
             .populate('product')
-            .populate('Buyer', 'name phone')
+            .populate('customer', 'name phone')
             .sort({ createdAt: -1 });
         res.json(orders);
     } catch (err) {

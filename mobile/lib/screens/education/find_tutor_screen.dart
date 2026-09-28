@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nisk_app/screens/education/checkout_screen.dart';
+import 'package:nisk_app/screens/education/tutor_details_screen.dart';
 import 'package:nisk_app/services/api_service.dart';
 
 class FindTutorScreen extends StatefulWidget {
@@ -10,14 +10,10 @@ class FindTutorScreen extends StatefulWidget {
 }
 
 class _FindTutorScreenState extends State<FindTutorScreen> {
-  int _currentStep = 0;
-  
   String? _selectedMode;
   String? _selectedLocation;
   String? _selectedGrade;
   String? _selectedSubject;
-  Map<String, dynamic>? _selectedTeacher;
-  int _numberOfClasses = 1;
 
   List<String> _locations = [];
   List<String> _grades = [];
@@ -31,6 +27,7 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
   void initState() {
     super.initState();
     _fetchFilters();
+    _fetchFilteredTeachers(); // Load initial teachers
   }
 
   Future<void> _fetchFilters() async {
@@ -67,10 +64,12 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
       if (_selectedLocation != null && _selectedLocation!.isNotEmpty) query += '${query.isEmpty ? '?' : '&'}location=${Uri.encodeComponent(_selectedLocation!)}';
       
       final data = await _apiService.get('/teacher$query');
-      setState(() {
-        _teachers = data;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _teachers = data;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -79,258 +78,203 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
     }
   }
 
+  void _onFilterChanged() {
+    _fetchFilters();
+    _fetchFilteredTeachers();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text('Find Tutor'),
+        title: const Text('Find a Tutor'),
         backgroundColor: Colors.redAccent,
         foregroundColor: Colors.white,
       ),
-      body: Stepper(
-        currentStep: _currentStep,
-        onStepContinue: () {
-          if (_currentStep == 0 && _selectedMode == null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill it: Select Learning Mode')));
-            return;
-          }
-          if (_currentStep == 1 && (_selectedLocation == null || _selectedLocation!.isEmpty)) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a Location from available teachers')));
-            return;
-          }
-          if (_currentStep == 2 && _selectedGrade == null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill it: Select a Grade')));
-            return;
-          }
-          if (_currentStep == 3 && _selectedSubject == null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill it: Select a Subject')));
-            return;
-          }
-          if (_currentStep == 3) {
-             // Fetch teachers before moving to step 4
-             _fetchFilteredTeachers();
-          }
-          if (_currentStep == 4 && _selectedTeacher == null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill it: Select a Teacher!')));
-            return;
-          }
-          if (_currentStep < 5) {
-            setState(() => _currentStep += 1);
-          } else {
-            // Checkout logical
-            _showCheckoutDialog();
-          }
-        },
-        onStepCancel: () {
-          if (_currentStep > 0) {
-            setState(() => _currentStep -= 1);
-          }
-        },
-        steps: [
-          Step(
-            title: const Text('Learning Mode'),
-            content: Row(
+      body: Column(
+        children: [
+          // Filter Section
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                Expanded(child: RadioListTile<String>(
-                  title: const Text('Online'),
-                  value: 'Online',
-                  groupValue: _selectedMode,
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedMode = val;
-                      _selectedLocation = null;
-                      _selectedGrade = null;
-                      _selectedSubject = null;
-                    });
-                    _fetchFilters();
-                  },
-                  activeColor: Colors.redAccent,
-                )),
-                Expanded(child: RadioListTile<String>(
-                  title: const Text('Offline'),
-                  value: 'Offline',
-                  groupValue: _selectedMode,
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedMode = val;
-                      _selectedLocation = null;
-                      _selectedGrade = null;
-                      _selectedSubject = null;
-                    });
-                    _fetchFilters();
-                  },
-                  activeColor: Colors.redAccent,
-                )),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDropdown('Mode', _selectedMode, ['Online', 'Offline'], (val) {
+                        setState(() { _selectedMode = val; _selectedLocation = null; });
+                        _onFilterChanged();
+                      }),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildDropdown('Grade', _selectedGrade, _grades, (val) {
+                        setState(() => _selectedGrade = val);
+                        _onFilterChanged();
+                      }),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDropdown('Location', _selectedLocation, _locations, (val) {
+                        setState(() => _selectedLocation = val);
+                        _onFilterChanged();
+                      }, isEnabled: _selectedMode == 'Offline'),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildDropdown('Subject', _selectedSubject, _subjects, (val) {
+                        setState(() => _selectedSubject = val);
+                        _onFilterChanged();
+                      }),
+                    ),
+                  ],
+                ),
               ],
             ),
-            isActive: _currentStep >= 0,
           ),
-          Step(
-            title: const Text('Location'),
-            content: DropdownButtonFormField<String>(
-              value: _selectedLocation,
-              items: _locations.map((loc) => DropdownMenuItem(value: loc, child: Text(loc))).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedLocation = val;
-                  _selectedGrade = null;
-                  _selectedSubject = null;
-                });
-                _fetchFilters();
-              },
-              decoration: const InputDecoration(labelText: 'Select City/Area', border: OutlineInputBorder()),
-            ),
-            isActive: _currentStep >= 1,
-          ),
-          Step(
-            title: const Text('Select Grade'),
-            content: DropdownButtonFormField<String>(
-              value: _selectedGrade,
-              items: _grades.map((grade) => DropdownMenuItem(value: grade, child: Text(grade))).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedGrade = val;
-                  _selectedSubject = null;
-                });
-                _fetchFilters();
-              },
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-            ),
-            isActive: _currentStep >= 2,
-          ),
-          Step(
-            title: const Text('Select Subject'),
-            content: DropdownButtonFormField<String>(
-              value: _selectedSubject,
-              items: _subjects.map((subj) => DropdownMenuItem(value: subj, child: Text(subj))).toList(),
-              onChanged: (val) {
-                setState(() => _selectedSubject = val);
-                _fetchFilters();
-              },
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-            ),
-            isActive: _currentStep >= 3,
-          ),
-          Step(
-            title: const Text('Select Teacher'),
-            content: _isLoading 
-                ? const Center(child: CircularProgressIndicator()) 
-                : _teachers.isEmpty 
-                    ? const Text('No teachers found.')
-                    : Column(
-                        children: _teachers.map((t) {
-                          final user = t['user'] ?? {};
-                          final name = user['name'] ?? 'Unknown Teacher';
-                          final rate = t['hourlyRate'] ?? 1000;
-                          
-                          String? imageUrl;
-                          if (t['profilePicture'] != null && t['profilePicture'].toString().isNotEmpty) {
-                            String rawPath = t['profilePicture'].toString();
-                            rawPath = rawPath.replaceAll('\\', '/');
-                            String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
-                            if (!rawPath.startsWith('/')) rawPath = '/$rawPath';
-                            imageUrl = '$base$rawPath';
-                          }
-
-                          return Card(
-                            color: (_selectedTeacher != null && _selectedTeacher!['_id'] == t['_id']) ? Colors.red.shade50 : Colors.white,
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.grey.shade200,
-                                backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
-                                child: imageUrl == null ? const Icon(Icons.person, color: Colors.grey) : null,
-                              ),
-                              title: Row(
-                                children: [
-                                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  if (t['isVerified'] == true) ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.verified, color: Colors.blue, size: 16)
-                                  ]
-                                ],
-                              ),
-                              subtitle: Text('Exp: ${t['experience']} | Rate: LKR $rate/hr'),
-                              trailing: Text('⭐ ${t['rating'] ?? 0}'),
-                              onTap: () => setState(() => _selectedTeacher = t),
-                            ),
-                          );
-                        }).toList(),
+          
+          // Teacher List Section
+          Expanded(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+              : _teachers.isEmpty 
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.search_off, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text('No tutors found matching these filters', style: TextStyle(color: Colors.grey)),
+                        ],
                       ),
-            isActive: _currentStep >= 4,
-          ),
-          Step(
-            title: const Text('Class Details'),
-            content:Row(
-              children: [
-                const Text('Number of Classes: '),
-                IconButton(icon: const Icon(Icons.remove), onPressed: () => setState(() { if(_numberOfClasses>1) _numberOfClasses--;})),
-                Text('$_numberOfClasses', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(icon: const Icon(Icons.add), onPressed: () => setState(() => _numberOfClasses++)),
-              ],
-            ),
-            isActive: _currentStep >= 5,
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _teachers.length,
+                      itemBuilder: (context, index) {
+                        return _buildTeacherCard(_teachers[index]);
+                      },
+                    ),
           )
         ],
       ),
     );
   }
 
-  void _showCheckoutDialog() {
-    double rate = (_selectedTeacher != null && _selectedTeacher!['hourlyRate'] != null) 
-       ? double.tryParse(_selectedTeacher!['hourlyRate'].toString()) ?? 1500.0 
-       : 1500.0;
-    String teacherName = _selectedTeacher != null && _selectedTeacher!['user'] != null 
-       ? (_selectedTeacher!['user']['name'] ?? 'Unknown') 
-       : 'None selected';
-       
-    double subtotal = rate * _numberOfClasses;
-    double serviceCharge = subtotal * 0.10; // 10% fee
-    double grandTotal = subtotal + serviceCharge;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ORDER SUMMARY'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Mode: $_selectedMode'),
-            Text('Grade: $_selectedGrade'),
-            Text('Subject: $_selectedSubject'),
-            Text('Teacher: $teacherName'),
-            const Divider(),
-            Text('Classes: $_numberOfClasses'),
-            Text('Rate: LKR $rate'),
-            Text('Subtotal: LKR $subtotal'),
-            Text('Service Charge (10%): LKR $serviceCharge'),
-            const Divider(),
-            Text('Total Amount: LKR $grandTotal', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          ],
+  Widget _buildDropdown(String hint, String? value, List<String> items, Function(String?) onChanged, {bool isEnabled = true}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isEnabled ? Colors.grey.shade50 : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300)
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: Text(hint, style: TextStyle(color: Colors.grey.shade600)),
+          value: items.contains(value) ? value : null,
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+          onChanged: isEnabled ? onChanged : null,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.redAccent),
         ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-               Navigator.pop(context);
-               Navigator.push(context, MaterialPageRoute(builder: (context) => EducationCheckoutScreen(
-                 bookingDetails: {
-                   'mode': _selectedMode,
-                   'grade': _selectedGrade,
-                   'subject': _selectedSubject,
-                   'teacher': teacherName,
-                   'teacherId': _selectedTeacher?['user']?['_id'] ?? _selectedTeacher?['_id'],
-                   'classes': _numberOfClasses,
-                   'rate': rate,
-                   'subtotal': subtotal,
-                   'serviceCharge': serviceCharge,
-                   'total': grandTotal
-                 }
-               )));
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
-            child: const Text('PROCEED TO PAYMENT'),
-          )
-        ],
+      ),
+    );
+  }
+
+  Widget _buildTeacherCard(Map<String, dynamic> t) {
+    final user = t['user'] ?? {};
+    final name = user['name'] ?? 'Professional Tutor';
+    final rate = t['hourlyRate'] ?? 1000;
+    
+    String? imageUrl;
+    if (t['profilePicture'] != null && t['profilePicture'].toString().isNotEmpty) {
+      String rawPath = t['profilePicture'].toString();
+      rawPath = rawPath.replaceAll('\\', '/');
+      String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
+      if (!rawPath.startsWith('/')) rawPath = '/$rawPath';
+      imageUrl = '$base$rawPath';
+    }
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          // Navigate to full details page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TutorDetailsScreen(
+                teacher: t,
+                imageUrl: imageUrl,
+                selectedMode: _selectedMode,
+                selectedGrade: _selectedGrade,
+                selectedSubject: _selectedSubject,
+              )
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Hero(
+                tag: 'tutor_${t['_id']}',
+                child: CircleAvatar(
+                  radius: 35,
+                  backgroundColor: Colors.red.shade50,
+                  backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+                  child: imageUrl == null ? const Icon(Icons.person, size: 35, color: Colors.redAccent) : null,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), maxLines: 1)),
+                        if (t['isVerified'] == true) const Icon(Icons.verified, color: Colors.blue, size: 18)
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('Exp: ${t['experience'] ?? 'N/A'}', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(20)),
+                      child: Text('LKR $rate / hr', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                    )
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      Text(' ${t['rating'] ?? 5.0}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.redAccent),
+                ],
+              )
+            ],
+          ),
+        ),
       ),
     );
   }

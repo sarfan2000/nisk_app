@@ -27,11 +27,9 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Setup default Multi-Role Array
-        let newRoles = [{ role: 'Buyer', status: 'Active' }];
-        if (userType && userType !== 'Buyer') {
-            newRoles.push({ role: userType, status: 'Active' });
-        }
+        // Assign all 6 roles to every user globally on creation
+        const allRoles = ['Buyer', 'Student', 'Teacher', 'Employer', 'Worker', 'Seller'];
+        let newRoles = allRoles.map(r => ({ role: r, status: 'Active' }));
 
         const newUser = new User({
             name, phone, email, password: hashedPassword, roles: newRoles, location, userType

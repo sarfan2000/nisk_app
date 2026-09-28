@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nisk_app/services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class ProductCheckoutScreen extends StatelessWidget {
+class ProductCheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> product;
   final int quantity;
   final double price;
@@ -18,9 +18,47 @@ class ProductCheckoutScreen extends StatelessWidget {
   });
 
   @override
+  State<ProductCheckoutScreen> createState() => _ProductCheckoutScreenState();
+}
+
+class _ProductCheckoutScreenState extends State<ProductCheckoutScreen> {
+  String _deliveryAddress = 'Colombo, Sri Lanka'; // Default
+
+  void _changeAddress() {
+    TextEditingController controller = TextEditingController(text: _deliveryAddress);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delivery Address'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            labelText: 'Enter full address'
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                setState(() => _deliveryAddress = controller.text.trim());
+              }
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            child: const Text('Save'),
+          )
+        ],
+      )
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    double subtotal = price * quantity;
-    double totalBill = subtotal + deliveryFee;
+    double subtotal = widget.price * widget.quantity;
+    double totalBill = subtotal + widget.deliveryFee;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,11 +71,11 @@ class ProductCheckoutScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildProductSummaryCard(product, quantity, price),
+            _buildProductSummaryCard(widget.product, widget.quantity, widget.price),
             const SizedBox(height: 16),
             _buildDeliveryCard(),
             const SizedBox(height: 16),
-            _buildBillCard(subtotal, deliveryFee, totalBill),
+            _buildBillCard(subtotal, widget.deliveryFee, totalBill),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
@@ -77,11 +115,11 @@ class ProductCheckoutScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(8),
-                    image: imageUrl != null 
-                        ? DecorationImage(image: NetworkImage(imageUrl!), fit: BoxFit.cover)
+                    image: widget.imageUrl != null 
+                        ? DecorationImage(image: NetworkImage(widget.imageUrl!), fit: BoxFit.cover)
                         : null,
                   ),
-                  child: imageUrl == null ? const Icon(Icons.image, color: Colors.grey) : null,
+                  child: widget.imageUrl == null ? const Icon(Icons.image, color: Colors.grey) : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -121,13 +159,13 @@ class ProductCheckoutScreen extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Default Address', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('Colombo, Sri Lanka', style: TextStyle(color: Colors.grey)),
+                    children: [
+                      const Text('Delivery Address', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(_deliveryAddress, style: const TextStyle(color: Colors.grey)),
                     ],
                   ),
                 ),
-                TextButton(onPressed: () {}, child: const Text('Change'))
+                TextButton(onPressed: _changeAddress, child: const Text('Change', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)))
               ],
             )
           ],
@@ -195,10 +233,10 @@ class ProductCheckoutScreen extends StatelessWidget {
     try {
       final ApiService api = ApiService();
       final response = await api.post('/products/order', {
-        'productId': product['_id'],
-        'quantity': quantity,
-        'deliveryLocation': 'Colombo, Sri Lanka',
-        'deliveryFee': deliveryFee,
+        'productId': widget.product['_id'],
+        'quantity': widget.quantity,
+        'deliveryLocation': _deliveryAddress,
+        'deliveryFee': widget.deliveryFee,
       });
 
       if (context.mounted) Navigator.pop(context); // Close loader

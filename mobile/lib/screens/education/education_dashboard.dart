@@ -48,7 +48,7 @@ class _EducationDashboardState extends State<EducationDashboard> {
             const SizedBox(height: 24),
             
             // Student / Customer specific views
-            if (['Student', 'Buyer', 'Employer', 'Admin'].contains(_userType) || _userType.isEmpty) ...[
+            if (['Student', 'Admin'].contains(_userType) || _userType.isEmpty) ...[
               _buildOptionCard(context, 'Find Tutors', Icons.person_search, () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const FindTutorScreen()));
               }),
@@ -70,8 +70,22 @@ class _EducationDashboardState extends State<EducationDashboard> {
               }),
             ],
 
-
-            _buildOptionCard(context, 'Educational Resources', Icons.library_books, () {}),
+            // Fallback for strict mode switching
+            if (!['Student', 'Teacher', 'Admin'].contains(_userType) && _userType.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.shade200)),
+                child: Column(
+                  children: [
+                    const Icon(Icons.security, color: Colors.redAccent, size: 40),
+                    const SizedBox(height: 12),
+                    const Text('Access Restricted', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.redAccent)),
+                    const SizedBox(height: 8),
+                    Text('You are currently browsing securely in ${_userType.toUpperCase()} mode.\n\nPlease open the Side Menu and switch your profile to STUDENT or TEACHER mode to access the Education Hub.', textAlign: TextAlign.center, style: TextStyle(color: Colors.red.shade900)),
+                  ],
+                ),
+              ),
             if (['Admin'].contains(_userType))
               _buildOptionCard(context, 'Admin: Verify Teachers', Icons.admin_panel_settings, () {}),
           ],

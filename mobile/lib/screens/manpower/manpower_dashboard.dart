@@ -48,7 +48,7 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
             const SizedBox(height: 24),
             
             // Employer / Customer views
-            if (['Employer', 'Buyer', 'Admin'].contains(_userType) || _userType.isEmpty) ...[
+            if (['Employer', 'Admin'].contains(_userType) || _userType.isEmpty) ...[
               _buildOptionCard(context, 'Find Workers', Icons.people_alt, () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const FindEmployeesScreen()));
               }),
@@ -69,8 +69,23 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PostJobScreen()));
               }),
             ],
-            
-            _buildOptionCard(context, 'Recruitment Services', Icons.handshake, () {}),
+
+            // Fallback for strict mode switching
+            if (!['Employer', 'Worker', 'Admin'].contains(_userType) && _userType.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.orange.shade200)),
+                child: Column(
+                  children: [
+                    const Icon(Icons.security, color: Colors.orange, size: 40),
+                    const SizedBox(height: 12),
+                    const Text('Access Restricted', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.orange)),
+                    const SizedBox(height: 8),
+                    Text('You are currently browsing securely in ${_userType.toUpperCase()} mode.\n\nPlease open the Side Menu and switch your profile to EMPLOYER or WORKER mode to access the Manpower Hub.', textAlign: TextAlign.center, style: TextStyle(color: Colors.orange.shade900)),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/products/add_product_screen.dart';
 import 'package:nisk_app/screens/products/find_products_screen.dart';
 import 'package:nisk_app/screens/products/my_orders_screen.dart';
+import 'package:nisk_app/screens/products/seller_orders_screen.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,7 +50,7 @@ class _ProductsDashboardState extends State<ProductsDashboard> {
             const SizedBox(height: 32),
             
             // Customer / Buyer views
-            if (['Buyer', 'Student', 'Employer', 'Admin'].contains(_userType) || _userType.isEmpty) ...[
+            if (['Buyer', 'Admin'].contains(_userType) || _userType.isEmpty) ...[
               _buildOptionCard(context, 'Find Products', Icons.search, () {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const FindProductsScreen()));
               }),
@@ -64,16 +65,26 @@ class _ProductsDashboardState extends State<ProductsDashboard> {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AddProductScreen()));
               }),
               _buildOptionCard(context, 'Manage Sales & Orders', Icons.assignment, () {
-                // Point to seller orders screen
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seller Orders coming soon')));
+                 Navigator.push(context, MaterialPageRoute(builder: (context) => const SellerOrdersScreen()));
               }),
             ],
-            
-            // Join as seller if they aren't one yet
-            if (!['Seller', 'Admin'].contains(_userType))
-              _buildOptionCard(context, 'Become a Seller', Icons.store, () {
-                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seller Registration coming soon')));
-              }),
+
+            // Fallback for strict mode switching
+            if (!['Buyer', 'Seller', 'Admin'].contains(_userType) && _userType.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.shade200)),
+                child: Column(
+                  children: [
+                    const Icon(Icons.security, color: Colors.green, size: 40),
+                    const SizedBox(height: 12),
+                    const Text('Access Restricted', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
+                    const SizedBox(height: 8),
+                    Text('You are currently browsing securely in ${_userType.toUpperCase()} mode.\n\nPlease open the Side Menu and switch your profile to BUYER or SELLER mode to access the Products Hub.', textAlign: TextAlign.center, style: TextStyle(color: Colors.green.shade900)),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
