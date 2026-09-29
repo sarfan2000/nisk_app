@@ -19,6 +19,9 @@ const BookingSchema = new mongoose.Schema({
     totalBill: { type: Number, required: true },
     paymentStatus: { type: String, enum: ['Pending', 'Completed', 'Failed'], default: 'Pending' },
     status: { type: String, enum: ['Pending', 'Accepted', 'Admin_Approved', 'Teacher_Approved', 'Rejected', 'Completed'], default: 'Pending' },
+    arrangedStartTime: { type: Date },
+    arrangedEndTime: { type: Date },
+    meetingRoomId: { type: String },
     createdAt: { type: Date, default: Date.now }
 });
 

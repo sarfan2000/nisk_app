@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../education/live_class_screen.dart';
 class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
 
@@ -218,6 +218,34 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                 ],
                               ),
                             ),
+
+                            if (booking['arrangedStartTime'] != null) ...[
+                               const SizedBox(height: 12),
+                               Container(
+                                 width: double.infinity,
+                                 padding: const EdgeInsets.symmetric(vertical: 8),
+                                 child: Text(
+                                   'Scheduled: ${DateTime.parse(booking['arrangedStartTime']).toLocal().toString().substring(0, 16)}', 
+                                   textAlign: TextAlign.center,
+                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 15)
+                                 ),
+                               ),
+                               if (bookingStatus != 'Completed')
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                       Navigator.push(context, MaterialPageRoute(
+                                         builder: (context) => LiveClassScreen(channelName: booking['meetingRoomId'] ?? 'demo')
+                                       ));
+                                    },
+                                    icon: const Icon(Icons.video_camera_front, color: Colors.white),
+                                    label: const Text('JOIN LIVE CLASS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                    style: ElevatedButton.styleFrom(
+                                       backgroundColor: Colors.redAccent,
+                                       minimumSize: const Size.fromHeight(45),
+                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                                    ),
+                                  )
+                            ],
                             
                             // Approval Actions based on Role
                             if (_userType == 'Admin' && bookingStatus == 'Pending') ...[

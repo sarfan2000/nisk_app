@@ -10,14 +10,9 @@ class FindTutorScreen extends StatefulWidget {
 }
 
 class _FindTutorScreenState extends State<FindTutorScreen> {
-  String? _selectedMode;
-  String? _selectedLocation;
-  String? _selectedGrade;
-  String? _selectedSubject;
+  final TextEditingController _searchController = TextEditingController();
 
-  List<String> _locations = [];
-  List<String> _grades = [];
-  List<String> _subjects = [];
+
   List<dynamic> _teachers = [];
   bool _isLoading = false;
 
@@ -26,42 +21,19 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchFilters();
     _fetchFilteredTeachers(); // Load initial teachers
   }
 
-  Future<void> _fetchFilters() async {
-    try {
-      String query = '';
-      if (_selectedMode != null) query += '?mode=${Uri.encodeComponent(_selectedMode!)}';
-      if (_selectedLocation != null && _selectedLocation!.isNotEmpty) query += '${query.isEmpty ? '?' : '&'}location=${Uri.encodeComponent(_selectedLocation!)}';
-      if (_selectedGrade != null) query += '${query.isEmpty ? '?' : '&'}grade=${Uri.encodeComponent(_selectedGrade!)}';
-      
-      final data = await _apiService.get('/teacher/filters$query');
-      if (mounted) {
-        setState(() {
-          _locations = List<String>.from(data['locations'] ?? []);
-          _grades = List<String>.from(data['grades'] ?? []);
-          _subjects = List<String>.from(data['subjects'] ?? []);
-          
-          if (_selectedLocation != null && !_locations.contains(_selectedLocation)) _selectedLocation = null;
-          if (_selectedGrade != null && !_grades.contains(_selectedGrade)) _selectedGrade = null;
-          if (_selectedSubject != null && !_subjects.contains(_selectedSubject)) _selectedSubject = null;
-        });
-      }
-    } catch (e) {
-      print('Error fetching filters: $e');
-    }
-  }
+
 
   Future<void> _fetchFilteredTeachers() async {
     setState(() => _isLoading = true);
     try {
       String query = '';
-      if (_selectedSubject != null) query += '?subject=${Uri.encodeComponent(_selectedSubject!)}';
-      if (_selectedGrade != null) query += '${query.isEmpty ? '?' : '&'}grade=${Uri.encodeComponent(_selectedGrade!)}';
-      if (_selectedMode != null) query += '${query.isEmpty ? '?' : '&'}mode=${Uri.encodeComponent(_selectedMode!)}';
-      if (_selectedLocation != null && _selectedLocation!.isNotEmpty) query += '${query.isEmpty ? '?' : '&'}location=${Uri.encodeComponent(_selectedLocation!)}';
+      if (_searchController.text.trim().isNotEmpty) {
+        query = '?search=${Uri.encodeComponent(_searchController.text.trim())}';
+      }
+
       
       final data = await _apiService.get('/teacher$query');
       if (mounted) {
@@ -78,10 +50,7 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
     }
   }
 
-  void _onFilterChanged() {
-    _fetchFilters();
-    _fetchFilteredTeachers();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -94,48 +63,31 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
       ),
       body: Column(
         children: [
-          // Filter Section
+          // Search Bar
           Container(
             color: Colors.white,
             padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDropdown('Mode', _selectedMode, ['Online', 'Offline'], (val) {
-                        setState(() { _selectedMode = val; _selectedLocation = null; });
-                        _onFilterChanged();
-                      }),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDropdown('Grade', _selectedGrade, _grades, (val) {
-                        setState(() => _selectedGrade = val);
-                        _onFilterChanged();
-                      }),
-                    ),
-                  ],
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by subject, location, mode or name...',
+                prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDropdown('Location', _selectedLocation, _locations, (val) {
-                        setState(() => _selectedLocation = val);
-                        _onFilterChanged();
-                      }, isEnabled: _selectedMode == 'Offline'),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDropdown('Subject', _selectedSubject, _subjects, (val) {
-                        setState(() => _selectedSubject = val);
-                        _onFilterChanged();
-                      }),
-                    ),
-                  ],
+                filled: true,
+                fillColor: Colors.grey.shade200,
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _fetchFilteredTeachers();
+                  },
                 ),
-              ],
+              ),
+              onSubmitted: (_) => _fetchFilteredTeachers(),
+              textInputAction: TextInputAction.search,
             ),
           ),
           
@@ -167,26 +119,7 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
     );
   }
 
-  Widget _buildDropdown(String hint, String? value, List<String> items, Function(String?) onChanged, {bool isEnabled = true}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: isEnabled ? Colors.grey.shade50 : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300)
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          hint: Text(hint, style: TextStyle(color: Colors.grey.shade600)),
-          value: items.contains(value) ? value : null,
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-          onChanged: isEnabled ? onChanged : null,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.redAccent),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildTeacherCard(Map<String, dynamic> t) {
     final user = t['user'] ?? {};
@@ -216,9 +149,6 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
               builder: (context) => TutorDetailsScreen(
                 teacher: t,
                 imageUrl: imageUrl,
-                selectedMode: _selectedMode,
-                selectedGrade: _selectedGrade,
-                selectedSubject: _selectedSubject,
               )
             ),
           );

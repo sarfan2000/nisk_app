@@ -10,10 +10,26 @@ const upload = require('../middleware/upload');
 router.get('/', async (req, res) => {
     try {
         let filter = { isVerified: true };
-        if (req.query.subject) filter.subjects = { $in: [req.query.subject] };
-        if (req.query.grade) filter.grades = { $in: [req.query.grade] };
-        if (req.query.mode) filter.modes = { $in: [req.query.mode] };
-        if (req.query.location) filter.location = new RegExp(req.query.location, 'i'); // case-insensitive match
+
+        if (req.query.search) {
+            const regex = new RegExp(req.query.search, 'i');
+            const User = require('../models/User');
+            const matchingUsers = await User.find({ name: regex, 'roles.role': 'Teacher' }).select('_id');
+            const userIds = matchingUsers.map(u => u._id);
+
+            filter.$or = [
+                { subjects: { $elemMatch: { $regex: regex } } },
+                { modes: { $elemMatch: { $regex: regex } } },
+                { grades: { $elemMatch: { $regex: regex } } },
+                { location: regex },
+                { user: { $in: userIds } }
+            ];
+        } else {
+            if (req.query.subject) filter.subjects = { $in: [req.query.subject] };
+            if (req.query.grade) filter.grades = { $in: [req.query.grade] };
+            if (req.query.mode) filter.modes = { $in: [req.query.mode] };
+            if (req.query.location) filter.location = new RegExp(req.query.location, 'i'); // case-insensitive match
+        }
 
         const profiles = await TeacherProfile.find(filter).populate('user', 'name phone location isVerified status');
         res.json(profiles);

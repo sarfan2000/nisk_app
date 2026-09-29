@@ -8,6 +8,7 @@ const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
+const { RtcTokenBuilder, RtcRole } = require('agora-access-token');
 
 // 1. Get all grades
 router.get('/grades', async (req, res) => {
@@ -100,7 +101,7 @@ router.post('/book', [auth, role(['Student'])], async (req, res) => {
                     const notify = new Notification({
                         user: item.teacher,
                         title: 'New Student Booking Pending Approval',
-                        message: `A student has booked you for ${item.numberOfClasses} classes. It is pending admin payment verification.`,
+                        message: `A student has booked you for ${item.numberOfClasses} classes. It is pending payment completion.`,
                         type: 'Alert'
                     });
                     await notify.save();
@@ -171,6 +172,63 @@ router.patch('/bookings/:bookingId/status', [auth, role(['Teacher'])], async (re
 
         res.json({ msg: 'Booking status updated successfully', booking });
     } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 9. Schedule Live Class (Teacher)
+router.patch('/bookings/:bookingId/schedule', [auth, role(['Teacher'])], async (req, res) => {
+    try {
+        const { arrangedStartTime, arrangedEndTime } = req.body;
+
+        // Generate a random meeting room ID for this class
+        const meetingRoomId = 'ROOM_' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+        const booking = await Booking.findOneAndUpdate(
+            { bookingId: req.params.bookingId, 'items.teacher': req.user.id },
+            { arrangedStartTime, arrangedEndTime, meetingRoomId, status: 'Teacher_Approved' },
+            { new: true }
+        );
+
+        if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+
+        // Notify Student
+        const notify = new Notification({
+            user: booking.student,
+            title: 'Live Class Scheduled!',
+            message: `Your class for ${booking.bookingId} has been scheduled for ${new Date(arrangedStartTime).toLocaleString()}.`,
+            type: 'Reminder'
+        });
+        await notify.save();
+
+        res.json({ msg: 'Live Class Scheduled', booking });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 10. Get Agora RTC Token
+router.get('/agora-token', auth, async (req, res) => {
+    try {
+        const { channelName } = req.query;
+        if (!channelName) return res.status(400).json({ msg: 'channelName is required' });
+
+        const appID = process.env.AGORA_APP_ID;
+        const appCertificate = process.env.AGORA_APP_CERT;
+
+        if (!appID || !appCertificate) {
+            return res.status(500).json({ msg: 'Agora App ID or Certificate not configured in .env' });
+        }
+
+        const uid = 0; // Let Agora assign UID
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        const privilegeExpiredTs = currentTimestamp + 3600; // 1 hr token
+
+        const token = RtcTokenBuilder.buildTokenWithUid(appID, appCertificate, channelName, uid, RtcRole.PUBLISHER, privilegeExpiredTs);
+
+        res.json({ token, channelName, uid, appID });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
 });

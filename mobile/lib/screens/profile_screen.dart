@@ -28,6 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      _name = prefs.getString('userName') ?? 'User Profile';
       _activeRole = prefs.getString('activeRole') ?? 'Buyer';
       _profilePic = prefs.getString('profilePic');
       if (_profilePic != null && _profilePic!.isEmpty) _profilePic = null;
@@ -141,9 +142,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
             }),
             _buildProfileOption(context, Icons.security, 'Privacy & Security', () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ChangePasswordScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivacySecurityScreen()));
             }),
-            _buildProfileOption(context, Icons.help_outline, 'Help & Support', () {}),
+            _buildProfileOption(context, Icons.help_outline, 'Help & Support', () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpSupportScreen()));
+            }),
             const Divider(height: 40),
             ListTile(
               leading: Container(

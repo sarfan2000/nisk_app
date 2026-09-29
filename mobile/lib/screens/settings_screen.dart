@@ -68,13 +68,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          _buildSectionHeader('Account Administration'),
+          _buildSectionHeader('Profile Administration'),
           _buildListTile(
-            title: 'Change Password',
-            subtitle: 'Secure your account',
-            icon: Icons.lock_outline,
+            title: 'Personal Information',
+            subtitle: 'Update your name, email, and location',
+            icon: Icons.person_outline,
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ChangePasswordScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const EditProfileScreen()));
             },
           ),
           
@@ -114,29 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: _toggleDarkMode,
           ),
 
-          const SizedBox(height: 32),
-          Center(
-            child: TextButton.icon(
-              onPressed: () async {
-                  await AuthService().logout();
-                  if (mounted) {
-                     Navigator.of(context, rootNavigator: true).pushReplacementNamed('/login');
-                  }
-              },
-              icon: const Icon(Icons.logout, color: Colors.red),
-              label: const Text('Log Out Globally', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                backgroundColor: Colors.red.withOpacity(0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))
-              ),
-            ),
-          ),
           const SizedBox(height: 16),
-          const Center(
-            child: Text('NISK Super-App Version 2.0.1\n© 2026 NISK Platform', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ),
-          const SizedBox(height: 24),
         ],
       ),
     );

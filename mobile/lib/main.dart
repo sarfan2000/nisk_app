@@ -4,6 +4,7 @@ import 'package:device_preview/device_preview.dart';
 // No presets import needed
 import 'package:nisk_app/screens/home_screen.dart';
 import 'package:nisk_app/screens/login_screen.dart';
+import 'package:nisk_app/screens/profile_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,6 +96,7 @@ class _NiskAppState extends State<NiskApp> {
           routes: {
             '/login': (context) => const LoginScreen(),
             '/home': (context) => const HomeScreen(),
+            '/profile': (context) => const ProfileScreen(),
           },
         );
       }

@@ -123,7 +123,7 @@ router.post('/webhook', async (req, res) => {
     if (computedHash === md5sig) {
         if (status_code === '2') { // 2 = Success
             if (order_id.startsWith('BK')) {
-                const booking = await Booking.findOneAndUpdate({ bookingId: order_id }, { paymentStatus: 'Completed' }, { new: true });
+                const booking = await Booking.findOneAndUpdate({ bookingId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
                 if (booking) {
                     const notify = new Notification({
                         user: booking.student,
@@ -132,6 +132,20 @@ router.post('/webhook', async (req, res) => {
                         type: 'Alert'
                     });
                     await notify.save();
+
+                    if (booking.items && booking.items.length > 0) {
+                        for (let item of booking.items) {
+                            if (item.teacher) {
+                                const notifyTeacher = new Notification({
+                                    user: item.teacher,
+                                    title: 'Student Payment Confirmed!',
+                                    message: `A student has successfully paid for their booking. You can now accept or review it in your dashboard.`,
+                                    type: 'Alert'
+                                });
+                                await notifyTeacher.save();
+                            }
+                        }
+                    }
                 }
             } else if (order_id.startsWith('PR')) {
                 const existingOrder = await ProductOrder.findOne({ orderId: order_id });
@@ -164,7 +178,7 @@ router.post('/webhook', async (req, res) => {
                     }
                 }
             } else if (order_id.startsWith('MP')) {
-                const mBooking = await ManpowerBooking.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Completed' }, { new: true });
+                const mBooking = await ManpowerBooking.findOneAndUpdate({ orderId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
                 if (mBooking) {
                     const notify = new Notification({
                         user: mBooking.customer,
@@ -173,6 +187,14 @@ router.post('/webhook', async (req, res) => {
                         type: 'Alert'
                     });
                     await notify.save();
+
+                    const notifyWorker = new Notification({
+                        user: mBooking.worker,
+                        title: 'Employer Payment Confirmed!',
+                        message: `The employer has paid securely for booking ${order_id}. You can now view and accept the job in your dashboard.`,
+                        type: 'Alert'
+                    });
+                    await notifyWorker.save();
                 }
             }
         }
@@ -186,10 +208,20 @@ router.post('/webhook', async (req, res) => {
 router.get('/success', async (req, res) => {
     // DEV FALLBACK: PayHere cannot send webhooks to localhost. 
     // This forcibly updates the database when testing locally.
-    const order_id = req.query.order_id;
+    let order_id = req.query.order_id;
+    if (Array.isArray(order_id)) order_id = order_id[0]; // Fix for duplicate query params
+
     if (order_id) {
         if (order_id.startsWith('BK')) {
-            await Booking.findOneAndUpdate({ bookingId: order_id }, { paymentStatus: 'Completed' }, { new: true });
+            const booking = await Booking.findOneAndUpdate({ bookingId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
+            if (booking && booking.items) {
+                for (let item of booking.items) {
+                    if (item.teacher) {
+                        const Notification = require('../models/Notification');
+                        await new Notification({ user: item.teacher, title: 'Student Payment Confirmed!', message: 'A student has successfully paid for their booking.', type: 'Alert' }).save();
+                    }
+                }
+            }
         } else if (order_id.startsWith('PR')) {
             const existingOrder = await ProductOrder.findOne({ orderId: order_id });
             if (existingOrder && existingOrder.paymentStatus !== 'Paid') {
@@ -214,7 +246,11 @@ router.get('/success', async (req, res) => {
                 }
             }
         } else if (order_id.startsWith('MP')) {
-            await ManpowerBooking.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Completed' }, { new: true });
+            const mBooking = await ManpowerBooking.findOneAndUpdate({ orderId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
+            if (mBooking) {
+                const Notification = require('../models/Notification');
+                await new Notification({ user: mBooking.worker, title: 'Employer Payment Confirmed!', message: 'The employer has paid securely for your booking.', type: 'Alert' }).save();
+            }
         }
     }
     res.send('<h2>Payment Successful! You can close this tab and return to the app.</h2>');

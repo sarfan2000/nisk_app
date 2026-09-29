@@ -205,3 +205,129 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 }
+
+class PrivacySecurityScreen extends StatelessWidget {
+  const PrivacySecurityScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Privacy & Security'), backgroundColor: const Color(0xFF1B3B6F), foregroundColor: Colors.white),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 24, top: 8),
+            child: Text('Manage your account security and privacy preferences.', style: TextStyle(color: Colors.grey)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.lock, color: Colors.blueGrey),
+            title: const Text('Change Password'),
+            subtitle: const Text('Update your login password'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ChangePasswordScreen()));
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.security, color: Colors.blueGrey),
+            title: const Text('Two-Factor Authentication'),
+            subtitle: const Text('Add an extra layer of security'),
+            trailing: Switch(value: false, onChanged: (val) {
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('2FA is currently in development.')));
+            }),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.visibility_off, color: Colors.blueGrey),
+            title: const Text('Hide Phone Number'),
+            subtitle: const Text('Keep phone number private from public profiles'),
+            trailing: Switch(value: true, onChanged: (val) {}),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.devices, color: Colors.blueGrey),
+            title: const Text('Active Sessions'),
+            subtitle: const Text('Manage your logged-in devices'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only 1 active session currently.')));
+            },
+          ),
+          const Divider(),
+          const SizedBox(height: 32),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please contact Admin to delete account.')));
+              },
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
+              label: const Text('Request Account Deletion', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class HelpSupportScreen extends StatelessWidget {
+  const HelpSupportScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Help & Support'), backgroundColor: const Color(0xFF1B3B6F), foregroundColor: Colors.white),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+           Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              child: Image.asset('assets/images/Nisk.jpeg', height: 80, errorBuilder: (context, error, stackTrace) => const Icon(Icons.support_agent, size: 80, color: Color(0xFF1B3B6F))),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.contact_support, color: Colors.blueGrey),
+            title: const Text('Contact Us'),
+            subtitle: const Text('Send an email to NISK support'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Support Email: support@nisk.lk')));
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.question_answer, color: Colors.blueGrey),
+            title: const Text('FAQ'),
+            subtitle: const Text('Frequently Asked Questions'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact Admin for the FAQ Document.')));
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.policy, color: Colors.blueGrey),
+            title: const Text('Privacy Policy'),
+            trailing: const Icon(Icons.open_in_browser, size: 16),
+            onTap: () {},
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.description, color: Colors.blueGrey),
+            title: const Text('Terms of Service'),
+            trailing: const Icon(Icons.open_in_browser, size: 16),
+            onTap: () {},
+          ),
+          const SizedBox(height: 48),
+          const Center(
+            child: Text('NISK Super-App Version 1.0.0\n© 2026 NISK Platform', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

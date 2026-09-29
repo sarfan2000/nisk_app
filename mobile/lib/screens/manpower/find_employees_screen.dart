@@ -10,11 +10,9 @@ class FindEmployeesScreen extends StatefulWidget {
 }
 
 class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
-  String? _selectedCategory;
-  String? _selectedLocation;
-  
-  List<String> _categories = [];
-  List<String> _locations = [];
+  final TextEditingController _searchController = TextEditingController();
+
+
   List<dynamic> _employees = [];
   bool _isLoading = false;
 
@@ -23,36 +21,19 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchFilters();
     _fetchFilteredEmployees();
   }
 
-  Future<void> _fetchFilters() async {
-    try {
-      String query = '';
-      if (_selectedCategory != null) query += '?category=${Uri.encodeComponent(_selectedCategory!)}';
-      
-      final data = await _apiService.get('/manpower/jobs/filters$query');
-      if (mounted) {
-        setState(() {
-          _categories = List<String>.from(data['categories'] ?? []);
-          _locations = List<String>.from(data['locations'] ?? []);
-          
-          if (_selectedCategory != null && !_categories.contains(_selectedCategory)) _selectedCategory = null;
-          if (_selectedLocation != null && !_locations.contains(_selectedLocation)) _selectedLocation = null;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching filters: $e');
-    }
-  }
+
 
   Future<void> _fetchFilteredEmployees() async {
     setState(() => _isLoading = true);
     try {
       String query = '';
-      if (_selectedCategory != null) query += '?category=${Uri.encodeComponent(_selectedCategory!)}';
-      if (_selectedLocation != null && _selectedLocation!.isNotEmpty) query += '${query.isEmpty ? '?' : '&'}district=${Uri.encodeComponent(_selectedLocation!)}';
+      if (_searchController.text.trim().isNotEmpty) {
+        query = '?search=${Uri.encodeComponent(_searchController.text.trim())}';
+      }
+
       
       final data = await _apiService.get('/manpower/jobs$query');
       if (mounted) {
@@ -69,10 +50,7 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
     }
   }
 
-  void _onFilterChanged() {
-    _fetchFilters();
-    _fetchFilteredEmployees();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -85,26 +63,31 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
       ),
       body: Column(
         children: [
-          // Filter Section
+          // Search Bar
           Container(
             color: Colors.white,
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildDropdown('Category', _selectedCategory, _categories, (val) {
-                    setState(() { _selectedCategory = val; _selectedLocation = null; });
-                    _onFilterChanged();
-                  }),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by category, location, title or name...',
+                prefixIcon: const Icon(Icons.search, color: Colors.orange),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDropdown('Location (District)', _selectedLocation, _locations, (val) {
-                    setState(() => _selectedLocation = val);
-                    _onFilterChanged();
-                  }),
+                filled: true,
+                fillColor: Colors.grey.shade200,
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _fetchFilteredEmployees();
+                  },
                 ),
-              ],
+              ),
+              onSubmitted: (_) => _fetchFilteredEmployees(),
+              textInputAction: TextInputAction.search,
             ),
           ),
           
@@ -136,26 +119,7 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
     );
   }
 
-  Widget _buildDropdown(String hint, String? value, List<String> items, Function(String?) onChanged) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300)
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          hint: Text(hint, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-          value: items.contains(value) ? value : null,
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-          onChanged: onChanged,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.orange),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildWorkerCard(Map<String, dynamic> e) {
     final name = e['company'] ?? 'Independent Professional';
@@ -189,8 +153,8 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
               builder: (context) => WorkerDetailsScreen(
                 worker: e,
                 imageUrl: imageUrl,
-                selectedCategory: _selectedCategory ?? e['category'],
-                selectedLocation: _selectedLocation ?? locationName,
+                selectedCategory: e['category'] ?? 'Category',
+                selectedLocation: locationName,
               )
             ),
           );

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../education/live_class_screen.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -12,11 +15,30 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   List<dynamic> _bookings = [];
+  String _userName = 'Teacher';
+  String? _profilePic;
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _fetchTeacherBookings();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'Teacher';
+      _profilePic = prefs.getString('profilePic');
+      if (_profilePic != null && _profilePic!.isEmpty) _profilePic = null;
+    });
+  }
+
+  String? _getImageUrl(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    String baseUrl = ApiService.baseUrl.replaceAll('/api', '');
+    return '$baseUrl/${path.replaceAll('\\', '/')}';
   }
 
   Future<void> _fetchTeacherBookings() async {
@@ -36,7 +58,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Future<void> _updateBookingStatus(String bookingId, String currentStatus) async {
-    final newStatus = currentStatus == 'Pending' ? 'Accepted' : 'Pending';
+    final newStatus = (currentStatus == 'Pending' || currentStatus == 'Admin_Approved') ? 'Teacher_Approved' : 'Completed';
     try {
       final response = await _apiService.patch('/education/bookings/$bookingId/status', {'status': newStatus});
       if (response != null && mounted) {
@@ -45,6 +67,30 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
+    }
+  }
+
+  Future<void> _scheduleClass(String bookingId) async {
+    final date = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
+    if (date == null) return;
+    
+    // ignore: use_build_context_synchronously
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (time == null) return;
+
+    final start = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    
+    try {
+      final response = await _apiService.patch('/education/bookings/$bookingId/schedule', {
+        'arrangedStartTime': start.toIso8601String(),
+        'arrangedEndTime': start.add(const Duration(hours: 1)).toIso8601String()
+      });
+      if (response != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Class Scheduled Successfully!')));
+        _fetchTeacherBookings();
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to schedule: $e')));
     }
   }
 
@@ -93,12 +139,24 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const ListTile(
+            ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(radius: 30, backgroundColor: Colors.redAccent, child: Icon(Icons.person, color: Colors.white)),
-              title: Text('Welcome, Teacher', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              subtitle: Text('Manage your schedule.'),
-              trailing: Icon(Icons.edit, color: Colors.grey),
+              leading: CircleAvatar(
+                radius: 30, 
+                backgroundColor: Colors.redAccent, 
+                backgroundImage: _getImageUrl(_profilePic) != null ? NetworkImage(_getImageUrl(_profilePic)!) : null,
+                child: _getImageUrl(_profilePic) == null ? const Icon(Icons.person, color: Colors.white) : null,
+              ),
+              title: Text('Welcome, $_userName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              subtitle: const Text('Manage your schedule.'),
+              trailing: IconButton(
+                icon: const Icon(Icons.edit, color: Colors.grey),
+                onPressed: () async {
+                  // Usually, this should switch to the Profile tab. We can push the ProfileScreen on top just for editing.
+                  await Navigator.pushNamed(context, '/profile'); 
+                  _loadUserData(); // Reload image and name after returning block
+                },
+              ),
             ),
             const SizedBox(height: 24),
             Row(
@@ -129,7 +187,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                           final String title = b['bookingId'] ?? 'BK-Unknown';
                           final String details = 'Student: $studentName ($grade)';
                           
-                          return _buildBookingCard(title, details, status);
+                          return _buildBookingCard(title, details, status, b['arrangedStartTime'], b['meetingRoomId']);
                         },
                       ),
           ],
@@ -153,7 +211,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildBookingCard(String title, String details, String status) {
+  Widget _buildBookingCard(String title, String details, String status, String? startTime, String? meetingRoomId) {
+    bool isActionable = (status == 'Pending' || status == 'Admin_Approved');
+    String displayStatus = status == 'Admin_Approved' ? 'Paid - Action Required' : status;
+    String buttonText = isActionable ? 'Accept Class' : (startTime == null ? 'Schedule Class' : 'Complete Class');
+    Color buttonColor = isActionable ? Colors.green : (startTime == null ? Colors.purple : (status == 'Completed' ? Colors.grey : Colors.blue));
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -162,31 +225,52 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(details, style: const TextStyle(fontWeight: FontWeight.w500)),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                   Icon(status == 'Accepted' ? Icons.check_circle : Icons.pending, size: 16, color: status == 'Pending' ? Colors.orange : Colors.green),
-                   const SizedBox(width: 4),
-                   Expanded(
-                     child: Text('Status: $status', style: TextStyle(color: status == 'Pending' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis, maxLines: 1),
-                   ),
-                ]
-              )
-            ],
-          ),
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+               Text(details, style: const TextStyle(fontWeight: FontWeight.w500)),
+               if (startTime != null) ...[
+                 const SizedBox(height: 4),
+                 Text('Scheduled: ${DateTime.parse(startTime).toLocal().toString().substring(0, 16)}', style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),
+               ],
+               const SizedBox(height: 4),
+               Row(
+                 children: [
+                    Icon(isActionable ? Icons.pending : Icons.check_circle, size: 16, color: isActionable ? Colors.orange : Colors.green),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text('Status: $displayStatus', style: TextStyle(color: isActionable ? Colors.orange : Colors.green, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis, maxLines: 1),
+                    ),
+                 ]
+               )
+             ],
+           ),
         ),
-        trailing: ElevatedButton(
-          onPressed: () => _updateBookingStatus(title, status),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: status == 'Pending' ? Colors.green : Colors.grey,
-            foregroundColor: Colors.white
-          ),
-          child: Text(status == 'Pending' ? 'Approve' : 'Reject'),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (startTime != null && status != 'Completed')
+              ElevatedButton(
+                 onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => 
+                      LiveClassScreen(channelName: meetingRoomId ?? 'demo')
+                    ));
+                 },
+                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, minimumSize: const Size(100, 32)),
+                 child: const Text('Join Live'),
+              ),
+            if (startTime == null || status == 'Completed')
+              ElevatedButton(
+                 onPressed: status == 'Completed' ? null : (isActionable ? () => _updateBookingStatus(title, status) : () => _scheduleClass(title)),
+                 style: ElevatedButton.styleFrom(
+                   backgroundColor: buttonColor,
+                   foregroundColor: Colors.white,
+                 ),
+                 child: Text(buttonText),
+              ),
+          ],
         ),
       ),
     );
   }
 }
+

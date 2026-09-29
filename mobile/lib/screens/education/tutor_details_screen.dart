@@ -25,6 +25,19 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
   int _numberOfClasses = 1;
   String _activeTab = 'About'; // About, Info
 
+  String? _mode;
+  String? _grade;
+  String? _subject;
+
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.teacher;
+    _mode = widget.selectedMode ?? ((t['modes'] as List?)?.isNotEmpty == true ? t['modes'][0] : 'Online');
+    _grade = widget.selectedGrade ?? ((t['grades'] as List?)?.isNotEmpty == true ? t['grades'][0] : 'Grade 10');
+    _subject = widget.selectedSubject ?? ((t['subjects'] as List?)?.isNotEmpty == true ? t['subjects'][0] : 'General');
+  }
+
   void _proceedToCheckout() {
     double rate = widget.teacher['hourlyRate'] != null 
        ? double.tryParse(widget.teacher['hourlyRate'].toString()) ?? 1500.0 
@@ -45,9 +58,9 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
           children: [
             Text('Booking for: $teacherName'),
             const Divider(),
-            if (widget.selectedSubject != null) Text('Subject: ${widget.selectedSubject}'),
-            if (widget.selectedGrade != null) Text('Grade: ${widget.selectedGrade}'),
-            Text('Mode: ${widget.selectedMode ?? "Online"}'),
+            if (_subject != null) Text('Subject: $_subject'),
+            if (_grade != null) Text('Grade: $_grade'),
+            Text('Mode: ${_mode ?? "Online"}'),
             const SizedBox(height: 10),
             Text('Classes: $_numberOfClasses'),
             Text('Rate: LKR $rate / hr'),
@@ -64,9 +77,9 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
                Navigator.pop(context); // Close summary
                Navigator.push(context, MaterialPageRoute(builder: (context) => EducationCheckoutScreen(
                  bookingDetails: {
-                   'mode': widget.selectedMode ?? 'Online',
-                   'grade': widget.selectedGrade ?? 'Not Specified',
-                   'subject': widget.selectedSubject ?? 'General',
+                   'mode': _mode ?? 'Online',
+                   'grade': _grade ?? 'Not Specified',
+                   'subject': _subject ?? 'General',
                    'teacher': teacherName,
                    'teacherId': widget.teacher['user']?['_id'] ?? widget.teacher['_id'],
                    'classes': _numberOfClasses,
@@ -147,6 +160,31 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
               ),
             ),
             
+            // Booking Selections
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Select Booking Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildDropdown('Mode', _mode ?? 'Online', (t['modes'] as List?)?.map((e) => e.toString()).toList() ?? ['Online', 'Offline'], (val) => setState(() => _mode = val)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildDropdown('Grade', _grade ?? 'Grade 10', (t['grades'] as List?)?.map((e) => e.toString()).toList() ?? ['Grade 10'], (val) => setState(() => _grade = val)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDropdown('Subject', _subject ?? 'Mathematics', (t['subjects'] as List?)?.map((e) => e.toString()).toList() ?? ['Mathematics'], (val) => setState(() => _subject = val)),
+                ],
+              ),
+            ),
+
             // Tab Controls
             Row(
               children: [
@@ -280,6 +318,30 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
             ),
           )
         ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown(String hint, String? value, List<String> items, Function(String?) onChanged) {
+    // Ensure the current value exists in the options
+    String? safeValue = items.contains(value) ? value : (items.isNotEmpty ? items[0] : null);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300)
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: Text(hint, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+          value: safeValue,
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+          onChanged: onChanged,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.redAccent),
+        ),
       ),
     );
   }

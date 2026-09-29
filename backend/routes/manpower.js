@@ -59,9 +59,26 @@ router.get('/jobs', async (req, res) => {
         const { category, jobType, district } = req.query;
         let query = { isActive: true }; // Temporarily relaxed isVerified so they can see all tests
 
-        if (category) query.category = category;
-        if (jobType) query.jobType = jobType;
-        if (district) query['location.city'] = new RegExp(district, 'i');
+        if (req.query.search) {
+            const regex = new RegExp(req.query.search, 'i');
+            const User = require('../models/User');
+            // Two-step to find employer by name
+            const matchingEmployers = await User.find({ name: regex }).select('_id');
+            const employerIds = matchingEmployers.map(u => u._id);
+
+            query.$or = [
+                { title: regex },
+                { category: regex },
+                { jobType: regex },
+                { 'location.city': regex },
+                { 'location.district': regex },
+                { employer: { $in: employerIds } }
+            ];
+        } else {
+            if (category) query.category = category;
+            if (jobType) query.jobType = jobType;
+            if (district) query['location.city'] = new RegExp(district, 'i');
+        }
 
         const jobs = await Job.find(query).populate('employer', 'name phone email');
         res.json(jobs);
@@ -189,7 +206,7 @@ router.post('/book', [auth, role(['Employer', 'Buyer'])], async (req, res) => {
         const notify = new Notification({
             user: workerId,
             title: 'New Manpower Booking',
-            message: `An employer has booked you for ${duration} units of ${jobCategory}. It is pending admin payment verification.`,
+            message: `An employer has booked you for ${duration} units of ${jobCategory}. It is pending payment completion.`,
             type: 'Alert'
         });
         await notify.save();

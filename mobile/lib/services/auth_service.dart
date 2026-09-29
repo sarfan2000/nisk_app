@@ -47,6 +47,7 @@ class AuthService {
         await prefs.setString('roles', jsonEncode(roles));
         await prefs.setString('activeRole', activeRole);
         await prefs.setString('profilePic', data['user']['profilePic'] ?? '');
+        await prefs.setString('userName', data['user']['name'] ?? 'User');
 
 
         return User.fromJson(data['user'], token);
