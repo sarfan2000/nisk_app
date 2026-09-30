@@ -8,16 +8,23 @@ import 'package:nisk_app/screens/profile_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
   runApp(
-    DevicePreview(
-      enabled: !kReleaseMode,
-      builder: (context) => const NiskApp(),
-    ),
+    EasyLocalization(
+      supportedLocales: const [Locale('en'), Locale('ta'), Locale('si')],
+      path: 'assets/locales',
+      fallbackLocale: const Locale('en'),
+      child: DevicePreview(
+        enabled: !kReleaseMode,
+        builder: (context) => const NiskApp(),
+      ),
+    )
   );
 }
 
@@ -68,27 +75,50 @@ class _NiskAppState extends State<NiskApp> {
           debugShowCheckedModeBanner: false,
           themeMode: currentMode,
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B3B6F), brightness: Brightness.light),
-            textTheme: GoogleFonts.poppinsTextTheme(),
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.black, primary: Colors.black, secondary: const Color(0xFFF57224), brightness: Brightness.light),
+            scaffoldBackgroundColor: const Color(0xFFF9F9F9),
+            textTheme: GoogleFonts.interTextTheme(),
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.white,
               foregroundColor: Colors.black,
+              elevation: 0,
+              centerTitle: false,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
             ),
             useMaterial3: true,
           ),
           darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B3B6F), brightness: Brightness.dark),
-            scaffoldBackgroundColor: const Color(0xFF121212),
-            textTheme: GoogleFonts.poppinsTextTheme(ThemeData(brightness: Brightness.dark).textTheme),
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.black, primary: Colors.white, secondary: const Color(0xFFF57224), brightness: Brightness.dark),
+            scaffoldBackgroundColor: const Color(0xFF000000),
+            textTheme: GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme),
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF1E1E1E),
+              backgroundColor: Color(0xFF000000),
               foregroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
             ),
-            cardColor: const Color(0xFF1E1E1E),
+            cardColor: const Color(0xFF141414),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
             useMaterial3: true,
           ),
           useInheritedMediaQuery: true,
-          locale: DevicePreview.locale(context),
+          locale: context.locale, // Overridden if DevicePreview wants to inject? We merge them manually for prod: context.locale
+          supportedLocales: context.supportedLocales,
+          localizationsDelegates: context.localizationDelegates,
           builder: DevicePreview.appBuilder,
           home: _isLoading 
               ? const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF1B3B6F))))

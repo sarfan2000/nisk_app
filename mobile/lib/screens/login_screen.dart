@@ -58,23 +58,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1B3B6F), // Brand Blue
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
                 'CONNECT • EMPOWER • GROW',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, letterSpacing: 1.2),
+                style: TextStyle(fontSize: 12, letterSpacing: 1.2, color: Colors.grey),
               ),
               const SizedBox(height: 48),
               TextField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Phone Number',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.phone),
+                  filled: true,
+                  fillColor: Theme.of(context).cardColor,
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -83,8 +85,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordController,
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  filled: true,
+                  fillColor: Theme.of(context).cardColor,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -104,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password Reset SMS sent!')));
                   },
-                  child: const Text('Forgot Password?', style: TextStyle(color: Color(0xFF1B3B6F), fontWeight: FontWeight.bold)),
+                  child: const Text('Forgot Password?', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -113,24 +117,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 : ElevatedButton(
                     onPressed: _login,
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF1B3B6F),
-                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                     ),
-                    child: const Text('LOGIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text('LOGIN', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
                   ),
               const SizedBox(height: 16),
               Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don't have an account? "),
+                    const Text("Don't have an account? ", style: TextStyle(color: Colors.grey)),
                     GestureDetector(
                       onTap: () {
                          Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
                       },
-                      child: const Text(
+                      child: Text(
                         'Register',
-                        style: TextStyle(color: Color(0xFF1B3B6F), fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],

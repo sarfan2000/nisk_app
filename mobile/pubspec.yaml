@@ -22,10 +22,15 @@ dependencies:
   flutter_dotenv: ^6.0.1
   agora_rtc_engine: ^6.3.2
   permission_handler: ^11.3.1
+  easy_localization: ^3.0.8
+  flutter_localizations:
+    sdk: flutter
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 flutter:
   uses-material-design: true
@@ -34,3 +39,16 @@ flutter:
     - assets/locales/
     - assets/images/
     - .env
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/Nisk.jpeg"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/images/Nisk.jpeg"
+  android_12:
+    image: "assets/images/Nisk.jpeg"
+    color: "#FFFFFF"
+

@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('dns').setServers(['8.8.8.8', '8.8.4.4']); // Fix for Windows DNS ECONNREFUSED Bug
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');

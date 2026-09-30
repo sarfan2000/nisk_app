@@ -27,12 +27,13 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Assign default 6 roles, but keep Delivery strictly opt-in unless explicitly registered as one
-        const allRoles = ['Buyer', 'Student', 'Teacher', 'Employer', 'Worker', 'Seller'];
-        if (userType && !allRoles.includes(userType)) {
-            allRoles.push(userType); // This includes 'Delivery' if they picked it
+        // Base roles: everyone is a Buyer by default. They also get the role they explicitly applied for.
+        const activeRoles = ['Buyer'];
+        if (userType && userType !== 'Buyer') {
+            activeRoles.push(userType);
         }
-        let newRoles = allRoles.map(r => ({ role: r, status: 'Active' }));
+
+        let newRoles = activeRoles.map(r => ({ role: r, status: 'Active' }));
 
         const newUser = new User({
             name, phone, email, password: hashedPassword, roles: newRoles, location, userType
@@ -97,7 +98,11 @@ router.post('/add-role', auth, async (req, res) => {
         user.roles.push({ role, status: 'Active' });
         await user.save();
 
-        res.json({ roles: user.roles });
+        // Generate a fresh JWT with the newly updated roles so the frontend gains instant access
+        const payload = { user: { id: user._id, roles: user.roles, userType: user.userType } };
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '10h' });
+
+        res.json({ roles: user.roles, token });
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');

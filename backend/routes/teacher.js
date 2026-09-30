@@ -169,10 +169,15 @@ router.patch('/booking/:bookingId/status', [require('../middleware/auth'), requi
         const booking = await Booking.findOneAndUpdate({ _id: req.params.bookingId, 'items.teacher': req.user.id }, { status }, { new: true }).populate('student', 'name');
 
         if (booking && booking.student) {
+            let message = `Your booking for ${booking.items[0]?.subject?.name || 'a class'} has been ${status} by the teacher.`;
+            if (status === 'Teacher_Approved') {
+                message = 'Approved by teacher, live session link started.';
+            }
+
             const notify = new Notification({
                 user: booking.student._id,
                 title: 'Tutor Booking Update',
-                message: `Your booking for ${booking.items[0]?.subject || 'a class'} has been ${status} by the teacher.`,
+                message: message,
                 type: 'Alert'
             });
             await notify.save();

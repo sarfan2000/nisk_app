@@ -83,10 +83,14 @@ class _FindProductsScreenState extends State<FindProductsScreen> {
                         // ApiService.baseUrl is "http://localhost:5001/api", we need to remove "/api"
                         String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
                         
-                        if (!rawPath.startsWith('/')) {
-                          rawPath = '/$rawPath';
+                        if (rawPath.startsWith('http')) {
+                          imageUrl = rawPath;
+                        } else {
+                          if (!rawPath.startsWith('/')) {
+                            rawPath = '/$rawPath';
+                          }
+                          imageUrl = '$base$rawPath';
                         }
-                        imageUrl = '$base$rawPath';
                         print('Product image URL generated: $imageUrl');
                       }
 

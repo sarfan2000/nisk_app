@@ -65,9 +65,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Create an Account',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1B3B6F)),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 8),
               const Text('Join the ultimate multi-service platform in Sri Lanka.'),
@@ -116,7 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: _register,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF1B3B6F),
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('REGISTER ACCOUNT', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -130,9 +130,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onTap: () {
                        Navigator.pop(context); // Pops back to Login
                     },
-                    child: const Text(
+                    child: Text(
                       'Login',
-                      style: TextStyle(color: Color(0xFF1B3B6F), fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],

@@ -1,47 +1,78 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('cloudinary').v2;
+const https = require('https');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
-// Configure Cloudinary with secure env limits
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'nisk_cloud',
-    api_key: process.env.CLOUDINARY_API_KEY || 'api_key_placeholder',
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'api_secret_placeholder',
-});
+function HybridStorage(opts) { }
 
-let storage;
+HybridStorage.prototype._handleFile = function _handleFile(req, file, cb) {
+    const isImage = file.mimetype.startsWith('image/');
+    const imgbbKey = process.env.IMGBB_API_KEY;
 
-if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== 'api_key_placeholder') {
-    // Create dynamic storage engine for CVs and Images
-    storage = new CloudinaryStorage({
-        cloudinary: cloudinary,
-        params: async (req, file) => {
-            let folderName = 'nisk_assets';
-            if (file.mimetype === 'application/pdf') {
-                folderName = 'nisk_cvs';
-            } else if (file.mimetype.startsWith('image/')) {
-                folderName = 'nisk_product_images';
-            }
+    if (isImage && imgbbKey) {
+        // Securely stream to ImgBB Cloud via native HTTPS
+        const chunks = [];
+        file.stream.on('data', chunk => chunks.push(chunk));
+        file.stream.on('end', () => {
+            const buffer = Buffer.concat(chunks);
+            const base64Image = buffer.toString('base64');
 
-            return {
-                folder: folderName,
-                allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
-                public_id: `${Date.now()}-${file.originalname.split('.')[0]}`
+            const postData = new URLSearchParams();
+            postData.append('image', base64Image);
+            const body = postData.toString();
+
+            const params = {
+                hostname: 'api.imgbb.com',
+                port: 443,
+                path: `/1/upload?key=${imgbbKey}`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Length': Buffer.byteLength(body)
+                }
             };
-        },
-    });
-} else {
-    console.warn("Using local disk storage. Please configure CLOUDINARY_API_KEY for cloud uploads.");
-    storage = multer.diskStorage({
-        destination: (req, file, cb) => {
-            cb(null, 'uploads/');
-        },
-        filename: (req, file, cb) => {
-            cb(null, `${Date.now()}-${file.originalname}`);
-        }
-    });
-}
-const upload = multer({ storage: storage });
+
+            const request = https.request(params, (res) => {
+                let rawData = '';
+                res.on('data', chunk => rawData += chunk);
+                res.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(rawData);
+                        if (parsed.success && parsed.data && parsed.data.url) {
+                            cb(null, {
+                                path: parsed.data.url, // Returns secure Cloud URL
+                                size: buffer.length
+                            });
+                        } else {
+                            cb(new Error("ImgBB Error"));
+                        }
+                    } catch (e) { cb(e); }
+                });
+            });
+            request.on('error', cb);
+            request.write(body);
+            request.end();
+        });
+    } else {
+        // Fallback to local storage for PDFs or if API key is missing
+        if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+        const filename = `${Date.now()}-${file.originalname}`;
+        const finalPath = path.join('uploads', filename);
+
+        const outStream = fs.createWriteStream(finalPath);
+        file.stream.pipe(outStream);
+        outStream.on('error', cb);
+        outStream.on('finish', () => {
+            cb(null, { path: finalPath.replace(/\\/g, '/'), size: outStream.bytesWritten });
+        });
+    }
+};
+
+HybridStorage.prototype._removeFile = function _removeFile(req, file, cb) {
+    cb(null);
+};
+
+const upload = multer({ storage: new HybridStorage() });
 
 module.exports = upload;

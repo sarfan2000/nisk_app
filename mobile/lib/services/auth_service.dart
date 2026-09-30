@@ -86,6 +86,10 @@ class AuthService {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('roles', jsonEncode(updatedRoles));
         
+        if (data['token'] != null) {
+          await prefs.setString('x-auth-token', data['token']);
+        }
+        
         return updatedRoles;
       } else {
         throw Exception(jsonDecode(response.body)['msg'] ?? 'Failed to add role');

@@ -168,13 +168,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController, 
-                decoration: const InputDecoration(labelText: 'Product Name *', border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Product Name ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Product Name is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _categoryController, 
-                decoration: const InputDecoration(labelText: 'Category *', border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Category ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Category is required' : null,
               ),
               const SizedBox(height: 16),
@@ -190,7 +190,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _priceController, 
-                      decoration: const InputDecoration(labelText: 'Price (LKR) *', border: OutlineInputBorder()), 
+                      decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Price (LKR) ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()), 
                       keyboardType: TextInputType.number,
                       validator: (value) => value == null || double.tryParse(value) == null ? 'Valid Price req.' : null,
                     )
@@ -199,7 +199,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _stockController, 
-                      decoration: const InputDecoration(labelText: 'Stock Qty *', border: OutlineInputBorder()), 
+                      decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Stock Qty ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()), 
                       keyboardType: TextInputType.number,
                       validator: (value) => value == null || int.tryParse(value) == null ? 'Valid Qty req.' : null,
                     )

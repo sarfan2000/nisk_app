@@ -20,6 +20,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
   late RtcEngine _engine;
   bool _muted = false;
   bool _videoDisabled = false;
+  bool _isScreenSharing = false;
 
   @override
   void initState() {
@@ -74,6 +75,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
       );
 
       await _engine.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
+      await _engine.enableAudio();
       await _engine.enableVideo();
       await _engine.startPreview();
 
@@ -116,6 +118,28 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     _engine.muteLocalVideoStream(_videoDisabled);
   }
 
+  Future<void> _onToggleScreenShare() async {
+    try {
+      if (_isScreenSharing) {
+        await _engine.stopScreenCapture();
+        await _engine.updateChannelMediaOptions(const ChannelMediaOptions(
+          publishCameraTrack: true,
+          publishScreenTrack: false,
+        ));
+        setState(() => _isScreenSharing = false);
+      } else {
+        await _engine.startScreenCapture(const ScreenCaptureParameters2(captureAudio: true, captureVideo: true));
+        await _engine.updateChannelMediaOptions(const ChannelMediaOptions(
+          publishCameraTrack: false,
+          publishScreenTrack: true,
+        ));
+        setState(() => _isScreenSharing = true);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Screen share error: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,10 +160,16 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
               height: 160,
               child: Center(
                 child: _localUserJoined
-                  ? (_videoDisabled 
+                  ? (_videoDisabled && !_isScreenSharing
                       ? Container(color: Colors.black, child: const Center(child: Icon(Icons.videocam_off, color: Colors.white)))
                       : AgoraVideoView(
-                          controller: VideoViewController(rtcEngine: _engine, canvas: const VideoCanvas(uid: 0)),
+                          controller: VideoViewController(
+                            rtcEngine: _engine, 
+                            canvas: VideoCanvas(
+                              uid: 0, 
+                              sourceType: _isScreenSharing ? VideoSourceType.videoSourceScreen : VideoSourceType.videoSourceCamera
+                            )
+                          ),
                         ))
                   : const CircularProgressIndicator(),
               ),
@@ -202,6 +232,18 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
             child: Icon(
               _videoDisabled ? Icons.videocam_off : Icons.videocam,
               color: _videoDisabled ? Colors.white : Colors.blueAccent,
+              size: 20.0,
+            ),
+          ),
+          RawMaterialButton(
+            onPressed: _onToggleScreenShare,
+            shape: const CircleBorder(),
+            elevation: 2.0,
+            fillColor: _isScreenSharing ? Colors.green : Colors.white,
+            padding: const EdgeInsets.all(15.0),
+            child: Icon(
+              _isScreenSharing ? Icons.stop_screen_share : Icons.screen_share,
+              color: _isScreenSharing ? Colors.white : Colors.blueAccent,
               size: 20.0,
             ),
           )

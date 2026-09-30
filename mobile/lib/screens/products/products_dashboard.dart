@@ -3,6 +3,7 @@ import 'package:nisk_app/screens/products/add_product_screen.dart';
 import 'package:nisk_app/screens/products/find_products_screen.dart';
 import 'package:nisk_app/screens/products/my_orders_screen.dart';
 import 'package:nisk_app/screens/products/seller_orders_screen.dart';
+import 'package:nisk_app/screens/products/seller_dashboard.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -61,6 +62,9 @@ class _ProductsDashboardState extends State<ProductsDashboard> {
 
             // Seller views
             if (['Seller', 'Admin'].contains(_userType)) ...[
+              _buildOptionCard(context, 'Seller Dashboard', Icons.dashboard, () {
+                 Navigator.push(context, MaterialPageRoute(builder: (context) => const SellerDashboard()));
+              }),
               _buildOptionCard(context, 'Sell a Product', Icons.storefront, () {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AddProductScreen()));
               }),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DeliveryDashboard extends StatefulWidget {
   const DeliveryDashboard({super.key});
@@ -168,11 +169,16 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Messaging / Call opened (Requires Plugin)')));
+                        onPressed: () async {
+                           final Uri url = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(cLocation)}');
+                           // ignore: deprecated_member_use
+                           if (await canLaunch(url.toString())) {
+                             // ignore: deprecated_member_use
+                             await launch(url.toString());
+                           }
                         },
-                        icon: const Icon(Icons.message, color: Colors.teal),
-                        label: const Text('Message', style: TextStyle(color: Colors.teal)),
+                        icon: const Icon(Icons.map, color: Colors.blue),
+                        label: const Text('Map', style: TextStyle(color: Colors.blue)),
                       ),
                     ),
                     const SizedBox(width: 8),

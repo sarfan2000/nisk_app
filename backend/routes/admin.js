@@ -70,6 +70,22 @@ router.get('/bookings/pending', [auth, role(['Admin', 'Super Admin'])], async (r
 router.patch('/bookings/:id/approve', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const booking = await Booking.findByIdAndUpdate(req.params.id, { status: 'Admin_Approved' }, { new: true });
+
+        if (booking && booking.items && booking.items.length > 0) {
+            for (let item of booking.items) {
+                if (item.teacher) {
+                    const Notification = require('../models/Notification');
+                    const notifyTeacher = new Notification({
+                        user: item.teacher,
+                        title: 'Student Payment Confirmed!',
+                        message: `Student paid successfully and booked your class. Subject: ${item.subject || 'Unknown'}, Grade: ${booking.grade || 'Unknown'}, Time: ${item.schedule || 'Pending'}. Please approve.`,
+                        type: 'Alert'
+                    });
+                    await notifyTeacher.save();
+                }
+            }
+        }
+
         res.json({ msg: 'Booking Admin Approved', booking });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });

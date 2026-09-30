@@ -3,7 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 
 import 'package:nisk_app/screens/profile_editor_screens.dart';
-import 'package:nisk_app/main.dart'; // To access globalThemeMode
+import 'package:nisk_app/main.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -49,8 +50,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _language = lang;
     });
     globalLanguage.value = lang;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Language updated to $lang')));
+
+    if (lang == 'Sinhala (සිංහල)') {
+      await context.setLocale(const Locale('si'));
+    } else if (lang == 'Tamil (தமிழ்)') {
+      await context.setLocale(const Locale('ta'));
+    } else {
+      await context.setLocale(const Locale('en'));
+    }
+
+    if (mounted) Navigator.pop(context);
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Language updated to $lang')));
   }
 
   @override

@@ -139,7 +139,7 @@ router.post('/webhook', async (req, res) => {
                                 const notifyTeacher = new Notification({
                                     user: item.teacher,
                                     title: 'Student Payment Confirmed!',
-                                    message: `A student has successfully paid for their booking. You can now accept or review it in your dashboard.`,
+                                    message: `Student paid successfully and booked your class. Subject: ${item.subject || 'Unknown'}, Grade: ${booking.grade || 'Unknown'}, Time: ${item.schedule || 'Pending'}. Please approve.`,
                                     type: 'Alert'
                                 });
                                 await notifyTeacher.save();
@@ -218,7 +218,12 @@ router.get('/success', async (req, res) => {
                 for (let item of booking.items) {
                     if (item.teacher) {
                         const Notification = require('../models/Notification');
-                        await new Notification({ user: item.teacher, title: 'Student Payment Confirmed!', message: 'A student has successfully paid for their booking.', type: 'Alert' }).save();
+                        await new Notification({
+                            user: item.teacher,
+                            title: 'Student Payment Confirmed!',
+                            message: `Student paid successfully and booked your class. Subject: ${item.subject || 'Unknown'}, Grade: ${booking.grade || 'Unknown'}, Time: ${item.schedule || 'Pending'}. Please approve.`,
+                            type: 'Alert'
+                        }).save();
                     }
                 }
             }
