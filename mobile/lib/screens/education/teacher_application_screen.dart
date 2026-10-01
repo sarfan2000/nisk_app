@@ -24,7 +24,8 @@ class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
   
   String _selectedMode = 'Online';
   final _subjectController = TextEditingController();
-  final _gradeController = TextEditingController();
+  final _qualificationController = TextEditingController();
+  String? _selectedGrade;
   
   bool _isSubmitting = false;
   final ApiService _apiService = ApiService();
@@ -58,13 +59,14 @@ class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
 
     try {
       final Map<String, String> fields = {
+        'qualifications': _qualificationController.text,
         'experience': _experienceController.text,
         'shortDescription': _descController.text,
         'availableDays': _daysController.text,
         'availableTime': _timeController.text,
         'hourlyRate': _rateController.text.isNotEmpty ? _rateController.text : '0',
         'subjects': jsonEncode([_subjectController.text]),
-        'grades': jsonEncode([_gradeController.text]),
+        'grades': jsonEncode([_selectedGrade ?? '']),
         'modes': jsonEncode([_selectedMode]),
         'location': _locationController.text,
       };
@@ -170,10 +172,24 @@ class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
                 validator: (val) => val == null || val.isEmpty ? 'Subject is required' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _gradeController, 
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Grade (e.g. Grade 10) ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(
+                value: _selectedGrade,
+                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Grade ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                items: [
+                  'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 
+                  'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 
+                  'Grade 11', 'Grade 12', 'Grade 13', 'O/L', 'A/L'
+                ]
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                    .toList(),
+                onChanged: (val) => setState(() => _selectedGrade = val),
                 validator: (val) => val == null || val.isEmpty ? 'Grade is required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _qualificationController, 
+                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Qualification (e.g. BSc, MSc) ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                validator: (val) => val == null || val.isEmpty ? 'Qualification is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(

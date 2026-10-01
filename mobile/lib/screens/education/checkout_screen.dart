@@ -60,6 +60,7 @@ class EducationCheckoutScreen extends StatelessWidget {
             _detailRow('Mode', details['mode'] ?? 'Unknown'),
             _detailRow('Grade', details['grade'] ?? 'Unknown'),
             _detailRow('Subject', details['subject'] ?? 'Unknown'),
+            _detailRow('Time', details['time'] ?? 'Flexible'),
             _detailRow('Teacher', details['teacher'] ?? 'Unknown'),
             _detailRow('Classes', details['classes']?.toString() ?? '1'),
             _detailRow('Rate', 'LKR ${details['rate'] ?? 0}'),
@@ -138,7 +139,8 @@ class EducationCheckoutScreen extends StatelessWidget {
              'teacher': bookingDetails['teacherId'], 
              'ratePerClass': bookingDetails['rate'],
              'numberOfClasses': bookingDetails['classes'],
-             'subtotal': bookingDetails['subtotal']
+             'subtotal': bookingDetails['subtotal'],
+             'schedule': bookingDetails['time']
           }
         ],
         'serviceCharge': bookingDetails['serviceCharge'],

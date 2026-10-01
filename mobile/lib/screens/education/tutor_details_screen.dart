@@ -82,6 +82,7 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
                    'subject': _subject ?? 'General',
                    'teacher': teacherName,
                    'teacherId': widget.teacher['user']?['_id'] ?? widget.teacher['_id'],
+                   'time': widget.teacher['availableTime'] ?? 'Flexible Schedule',
                    'classes': _numberOfClasses,
                    'rate': rate,
                    'subtotal': subtotal,

@@ -125,13 +125,17 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
         await _engine.updateChannelMediaOptions(const ChannelMediaOptions(
           publishCameraTrack: true,
           publishScreenTrack: false,
+          publishScreenCaptureVideo: false,
+          publishScreenCaptureAudio: false,
         ));
         setState(() => _isScreenSharing = false);
       } else {
         await _engine.startScreenCapture(const ScreenCaptureParameters2(captureAudio: true, captureVideo: true));
         await _engine.updateChannelMediaOptions(const ChannelMediaOptions(
           publishCameraTrack: false,
-          publishScreenTrack: true,
+          publishScreenTrack: true, // Desktop / Web
+          publishScreenCaptureVideo: true, // Mobile
+          publishScreenCaptureAudio: true, // Mobile
         ));
         setState(() => _isScreenSharing = true);
       }

@@ -47,9 +47,16 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
-                child: Image.asset(
-                  'assets/images/Nisk.jpeg',
-                  height: 120, // Adjust height as necessary
+                child: ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: 0.75, // Crops out the bottom 25% where the text is
+                    child: Image.asset(
+                      'assets/images/Nisk.jpeg',
+                      width: 150, // Increased size as requested
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

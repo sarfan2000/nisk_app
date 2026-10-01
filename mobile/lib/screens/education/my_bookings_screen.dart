@@ -133,6 +133,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                     final String teacherName = (items.isNotEmpty && items[0]['teacher'] != null && items[0]['teacher'] is Map) 
                          ? items[0]['teacher']['name'] ?? 'Assigned Teacher' 
                          : 'Assigned Teacher';
+                    
+                    final String studentName = (booking['student'] != null && booking['student'] is Map) 
+                         ? booking['student']['name'] ?? 'Unknown Student' 
+                         : 'Unknown Student';
+                    
+                    final String displayPersonLabel = _userType == 'Teacher' || _userType == 'Admin' ? 'Student' : 'Assigned Teacher';
+                    final String displayPersonName = _userType == 'Teacher' || _userType == 'Admin' ? studentName : teacherName;
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -168,7 +175,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               children: [
                                 const Icon(Icons.person, color: Colors.grey, size: 20),
                                 const SizedBox(width: 8),
-                                Text(teacherName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                Expanded(child: Text('$displayPersonLabel: $displayPersonName', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -176,7 +183,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               children: [
                                 const Icon(Icons.menu_book, color: Colors.grey, size: 20),
                                 const SizedBox(width: 8),
-                                Text(subject, style: const TextStyle(fontSize: 15)),
+                                Text('$subject (${booking['grade'] != null ? (booking['grade'] is Map ? booking['grade']['name'] ?? booking['grade']['gradeName'] ?? 'Unknown' : booking['grade']) : 'Unknown'})', style: const TextStyle(fontSize: 15)),
                               ],
                             ),
                             const SizedBox(height: 16),

@@ -232,21 +232,17 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const SizedBox(height: 10),
               Center(
-                child: Image.asset(
-                  'assets/images/Nisk.jpeg',
-                  height: 150,
-                  fit: BoxFit.contain,
+                child: ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: 0.75, // Crops bottom text in the image
+                    child: Image.asset(
+                      'assets/images/Nisk.jpeg',
+                      width: 150,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'NISK Manpower Consultant (PVT) Ltd.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               Row(
