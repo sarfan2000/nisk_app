@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'post_job_screen.dart';
 
 class WorkerDashboard extends StatefulWidget {
   const WorkerDashboard({super.key});
@@ -12,20 +14,37 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   List<dynamic> _bookings = [];
+  List<dynamic> _myJobs = [];
+  String _userName = 'Worker';
 
   @override
   void initState() {
     super.initState();
+    _loadUserName();
     _fetchWorkerBookings();
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'Worker';
+    });
   }
 
   Future<void> _fetchWorkerBookings() async {
     setState(() => _isLoading = true);
     try {
       final response = await _apiService.get('/manpower/worker-bookings');
-      if (response != null && mounted) {
+      if (mounted) {
         setState(() {
           _bookings = response;
+        });
+      }
+      
+      final jobsRes = await _apiService.get('/manpower/jobs/me');
+      if (jobsRes != null && mounted) {
+        setState(() {
+          _myJobs = jobsRes;
         });
       }
     } catch (e) {
@@ -81,12 +100,12 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const ListTile(
+            ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(radius: 30, backgroundColor: Colors.orange, child: Icon(Icons.person, color: Colors.white)),
-              title: Text('Welcome, Worker', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              subtitle: Text('Manage your jobs.'),
-              trailing: Icon(Icons.edit, color: Colors.grey),
+              leading: const CircleAvatar(radius: 30, backgroundColor: Colors.orange, child: Icon(Icons.person, color: Colors.white)),
+              title: Text('Welcome, $_userName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              subtitle: const Text('Manage your jobs.'),
+              trailing: const Icon(Icons.edit, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             Row(
@@ -120,6 +139,35 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                           return _buildBookingCard(title, details, status);
                         },
                       ),
+            const SizedBox(height: 24),
+            const Text('My Service Profiles (Edit / Manage)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _myJobs.isEmpty 
+              ? const Padding(padding: EdgeInsets.all(20), child: Text('No job postings yet.', style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _myJobs.length,
+                  itemBuilder: (context, index) {
+                    final job = _myJobs[index];
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: const Icon(Icons.work, color: Colors.orange),
+                        title: Text(job['title'] ?? 'Job', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('${job['category'] ?? ''} - LKR ${job['salary'] ?? 0}'),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => PostJobScreen(existingData: job))).then((_) => _fetchWorkerBookings());
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                          child: const Text('Edit'),
+                        ),
+                      ),
+                    );
+                  }
+              ),
           ],
         ),
       ),

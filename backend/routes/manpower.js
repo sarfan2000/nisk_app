@@ -7,6 +7,45 @@ const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 
+// 0. Get My Jobs
+router.get('/jobs/me', [auth], async (req, res) => {
+    try {
+        const jobs = await Job.find({ employer: req.user.id });
+        res.json(jobs);
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 0b. Update My Job
+router.put('/jobs/:id', [auth, upload.array('images', 1)], async (req, res) => {
+    try {
+        const payload = { ...req.body };
+        if (req.files && req.files.length > 0) payload.jobPicture = req.files[0].path;
+        if (payload.location && typeof payload.location === 'string') {
+            try { payload.location = JSON.parse(payload.location); } catch (e) { }
+        }
+        const job = await Job.findOneAndUpdate(
+            { _id: req.params.id, employer: req.user.id },
+            { $set: payload },
+            { new: true }
+        );
+        res.json({ msg: 'Job updated', job });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 0c. Delete My Job
+router.delete('/jobs/:id', [auth], async (req, res) => {
+    try {
+        await Job.findOneAndDelete({ _id: req.params.id, employer: req.user.id });
+        res.json({ msg: 'Job deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
 // 1. Post a Job / Worker Listing
 router.post('/jobs', [auth, role(['Employer', 'Buyer', 'Worker']), upload.array('images', 1)], async (req, res) => {
     try {

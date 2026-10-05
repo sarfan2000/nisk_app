@@ -32,6 +32,43 @@ class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
   final ImagePicker _picker = ImagePicker();
   XFile? _profilePicture;
   Uint8List? _webImageBytes;
+  bool _isLoadingData = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    setState(() => _isLoadingData = true);
+    try {
+      final data = await _apiService.get('/teacher/profile/me');
+      if (data != null && data['_id'] != null) {
+        _qualificationController.text = data['qualifications'] ?? '';
+        _experienceController.text = data['experience'] ?? '';
+        _descController.text = data['shortDescription'] ?? '';
+        _daysController.text = data['availableDays'] ?? '';
+        _timeController.text = data['availableTime'] ?? '';
+        _rateController.text = (data['hourlyRate'] ?? '').toString();
+        _locationController.text = data['location'] ?? '';
+        
+        if (data['subjects'] != null && (data['subjects'] as List).isNotEmpty) {
+          _subjectController.text = data['subjects'][0];
+        }
+        if (data['grades'] != null && (data['grades'] as List).isNotEmpty) {
+          _selectedGrade = data['grades'][0];
+        }
+        if (data['modes'] != null && (data['modes'] as List).isNotEmpty) {
+          _selectedMode = data['modes'][0];
+        }
+      }
+    } catch (e) {
+      debugPrint('No existing profile found or error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingData = false);
+    }
+  }
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -100,15 +137,53 @@ class _TeacherApplicationScreenState extends State<TeacherApplicationScreen> {
     }
   }
 
+  Future<void> _deleteProfile() async {
+    try {
+      await _apiService.delete('/teacher/profile/me');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile successfully deleted.')));
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete profile: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Teach with Us'),
+        title: Text(_qualificationController.text.isNotEmpty ? 'Edit Teacher Profile' : 'Teach with Us'),
         backgroundColor: Colors.redAccent,
         foregroundColor: Colors.white,
+        actions: _qualificationController.text.isNotEmpty ? [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Profile'),
+                  content: const Text('Are you sure you want to delete your teacher application/profile?'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deleteProfile();
+                      },
+                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          )
+        ] : null,
       ),
-      body: Form(
+      body: _isLoadingData ? const Center(child: CircularProgressIndicator()) : Form(
         key: _formKey,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),

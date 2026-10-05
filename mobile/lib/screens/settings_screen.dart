@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 
 import 'package:nisk_app/screens/profile_editor_screens.dart';
 import 'package:nisk_app/main.dart';
+import 'package:nisk_app/screens/suggestions_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -49,7 +50,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _language = lang;
     });
-    globalLanguage.value = lang;
 
     if (lang == 'Sinhala (සිංහල)') {
       await context.setLocale(const Locale('si'));
@@ -124,6 +124,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: _toggleDarkMode,
           ),
 
+          const SizedBox(height: 24),
+          _buildSectionHeader('Support & Feedback'),
+          _buildListTile(
+            title: 'Suggestion Box',
+            subtitle: 'Share your ideas to improve the platform',
+            icon: Icons.lightbulb_outline,
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const SuggestionsScreen()));
+            },
+          ),
+          
           const SizedBox(height: 16),
         ],
       ),

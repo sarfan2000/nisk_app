@@ -4,6 +4,28 @@ const TeacherProfile = require('../models/TeacherProfile');
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const upload = require('../middleware/upload');
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
+
+// Get My Teacher Profile
+router.get('/profile/me', [auth], async (req, res) => {
+    try {
+        const profile = await TeacherProfile.findOne({ user: req.user.id });
+        res.json(profile || {});
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// Delete My Teacher Profile
+router.delete('/profile/me', [auth], async (req, res) => {
+    try {
+        await TeacherProfile.findOneAndDelete({ user: req.user.id });
+        res.json({ msg: 'Profile deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
 
 // Get All Teacher Profiles (Find Tutor) - Only shows verified teachers!
 // Accepts ?subject=Science&grade=Grade 5

@@ -29,7 +29,6 @@ Future<void> main() async {
 }
 
 final ValueNotifier<ThemeMode> globalThemeMode = ValueNotifier(ThemeMode.light);
-final ValueNotifier<String> globalLanguage = ValueNotifier('English');
 
 class NiskApp extends StatefulWidget {
   const NiskApp({super.key});
@@ -52,12 +51,9 @@ class _NiskAppState extends State<NiskApp> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('x-auth-token');
     
-    // Also load saved theme & language
+    // Also load saved theme
     final isDark = prefs.getBool('isDarkMode') ?? false;
     globalThemeMode.value = isDark ? ThemeMode.dark : ThemeMode.light;
-    
-    final savedLang = prefs.getString('language') ?? 'English';
-    globalLanguage.value = savedLang;
     
     setState(() {
       _isLoggedIn = token != null && token.isNotEmpty;

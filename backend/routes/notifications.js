@@ -33,4 +33,14 @@ router.patch('/mark-read', require('../middleware/auth'), async (req, res) => {
     }
 });
 
+// Delete a specific notification
+router.delete('/:id', require('../middleware/auth'), async (req, res) => {
+    try {
+        await Notification.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+        res.json({ msg: 'Notification deleted' });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
 module.exports = router;

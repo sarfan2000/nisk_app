@@ -99,6 +99,44 @@ class ApiService {
     }
   }
 
+  Future<dynamic> putMultipart(
+      String endpoint, Map<String, String> fields, List<XFile> files) async {
+    final token = await _getToken();
+    var request = http.MultipartRequest('PUT', Uri.parse('$baseUrl$endpoint'));
+
+    if (token != null) {
+      request.headers['x-auth-token'] = token;
+    }
+
+    request.fields.addAll(fields);
+
+    for (var file in files) {
+      if (kIsWeb) {
+        final bytes = await file.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'images',
+          bytes,
+          filename: file.name,
+        ));
+      } else {
+        request.files.add(await http.MultipartFile.fromPath(
+          'images',
+          file.path,
+        ));
+      }
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return null;
+      return json.decode(response.body);
+    } else {
+      _extractError(response);
+    }
+  }
+
   Future<dynamic> patch(String endpoint, Map<String, dynamic> data) async {
     final token = await _getToken();
     final response = await http.patch(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token), body: json.encode(data));

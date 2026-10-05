@@ -41,6 +41,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _deleteNotification(String id) async {
+    try {
+      await _apiService.delete('/notifications/$id');
+      if (mounted) {
+        setState(() {
+          _notifications.removeWhere((n) => n['_id'] == id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification removed')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,6 +116,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             const SizedBox(height: 8),
                             Text(formattedDate, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                           ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () => _deleteNotification(notif['_id']),
                         ),
                         isThreeLine: true,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

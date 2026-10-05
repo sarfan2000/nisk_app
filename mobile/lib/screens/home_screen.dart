@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nisk_app/services/auth_service.dart';
 
 import 'package:nisk_app/main.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _unreadCount = 0;
   List<dynamic> _userRoles = [];
   String _activeRole = 'Buyer';
+  String _userName = '';
   int _currentIndex = 0;
 
   final Map<String, Widget> hubMapping = {
@@ -51,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _activeRole = prefs.getString('activeRole') ?? 'Buyer';
+      _userName = prefs.getString('userName') ?? '';
       String rolesJson = prefs.getString('roles') ?? '[]';
       _userRoles = jsonDecode(rolesJson);
     });
@@ -83,62 +86,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<String>(
-      valueListenable: globalLanguage,
-      builder: (context, lang, _) {
-        
-        String homeLabel = 'Home';
-        String searchLabel = 'Search';
-        String messagesLabel = 'Messages';
-        String profileLabel = 'Profile';
-
-        if (lang == 'Sinhala (සිංහල)') {
-          homeLabel = 'මුල් පිටුව';
-          searchLabel = 'සොයන්න';
-          messagesLabel = 'පණිවිඩ';
-          profileLabel = 'ගිණුම';
-        } else if (lang == 'Tamil (தமிழ்)') {
-          homeLabel = 'முகப்பு';
-          searchLabel = 'தேடல்';
-          messagesLabel = 'செய்திகள்';
-          profileLabel = 'கணக்கு';
-        }
-
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: _currentIndex == 0 ? _buildHomeAppBar() : null,
-          drawer: _currentIndex == 0 ? _buildRoleSwitcherDrawer() : null,
-          body: IndexedStack(
-            index: _currentIndex,
-            children: [
-              _buildHomeContent(context, lang),
-              const SearchScreen(),
-              const MessagesScreen(),
-              const ProfileScreen(),
-            ],
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            selectedItemColor: Theme.of(context).brightness == Brightness.dark ? Colors.blueAccent : const Color(0xFF1B3B6F),
-            unselectedItemColor: Colors.grey,
-            showUnselectedLabels: true,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-            items: [
-              BottomNavigationBarItem(icon: const Icon(Icons.home), label: homeLabel),
-              BottomNavigationBarItem(icon: const Icon(Icons.search), label: searchLabel),
-              BottomNavigationBarItem(icon: const Icon(Icons.message_outlined), label: messagesLabel),
-              BottomNavigationBarItem(icon: const Icon(Icons.person_outline), label: profileLabel),
-            ],
-          ),
-        );
-      }
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: _currentIndex == 0 ? _buildHomeAppBar() : null,
+      drawer: _currentIndex == 0 ? _buildRoleSwitcherDrawer() : null,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildHomeContent(context),
+          const SearchScreen(),
+          const MessagesScreen(),
+          const ProfileScreen(),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        selectedItemColor: Theme.of(context).brightness == Brightness.dark ? Colors.blueAccent : const Color(0xFF1B3B6F),
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        items: [
+          BottomNavigationBarItem(icon: const Icon(Icons.home), label: 'home'.tr()),
+          BottomNavigationBarItem(icon: const Icon(Icons.search), label: 'search'.tr()),
+          BottomNavigationBarItem(icon: const Icon(Icons.message_outlined), label: 'messages'.tr()),
+          BottomNavigationBarItem(icon: const Icon(Icons.person_outline), label: 'profile'.tr()),
+        ],
+      ),
     );
   }
 
@@ -197,32 +177,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHomeContent(BuildContext context, String lang) {
-    String title = 'One Platform.\nEndless Opportunities.';
-    String ed = 'EDUCATION ';
-    String edSub = 'Learn. Teach. Grow';
-    String mp = 'MANPOWER ';
-    String mpSub = 'Find Jobs. Hire Talent';
-    String pr = 'PRODUCTION & SALES ';
-    String prSub = 'Buy. Sell. Expand';
-
-    if (lang == 'Sinhala (සිංහල)') {
-      title = 'එක් වේදිකාවක්.\nනිමක් නැති අවස්ථා.';
-      ed = 'අධ්‍යාපනය';
-      edSub = 'ඉගෙනගන්න. උගන්වන්න.';
-      mp = 'ශ්‍රම බලකාය';
-      mpSub = 'රැකියා සොයන්න. බඳවා ගන්න.';
-      pr = 'නිෂ්පාදන සහ විකුණුම්';
-      prSub = 'මිලදී ගන්න. විකුණන්න.';
-    } else if (lang == 'Tamil (தமிழ்)') {
-      title = 'ஒரு தளம்.\nமுடிவற்ற வாய்ப்புகள்.';
-      ed = 'கல்வி';
-      edSub = 'கற்றுக்கொள். கற்பி.';
-      mp = 'மனிதவளம்';
-      mpSub = 'வேலை தேடு. வேலை கொடு.';
-      pr = 'உற்பத்தி மற்றும் விற்பனை';
-      prSub = 'வாங்கு. விற்க.';
-    }
+  Widget _buildHomeContent(BuildContext context) {
+    String title = 'home_title'.tr();
+    String ed = 'education'.tr();
+    String edSub = 'ed_sub'.tr();
+    String mp = 'manpower'.tr();
+    String mpSub = 'mp_sub'.tr();
+    String pr = 'production'.tr();
+    String prSub = 'pr_sub'.tr();
 
     return SingleChildScrollView(
       child: Padding(
@@ -406,6 +368,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text('Welcome, $_userName', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
                   const Text('Active Mode', style: TextStyle(color: Colors.white70, fontSize: 12)),
                   const SizedBox(height: 4),
                   Text(_activeRole.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),

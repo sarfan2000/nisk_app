@@ -155,10 +155,6 @@ router.post('/webhook', async (req, res) => {
                         const Product = require('../models/Product');
                         const productObj = await Product.findById(pOrder.product);
                         if (productObj) {
-                            productObj.stock -= pOrder.quantity;
-                            if (productObj.stock < 0) productObj.stock = 0; // fallback safety
-                            await productObj.save();
-
                             const notifySeller = new Notification({
                                 user: productObj.seller,
                                 title: 'New Product Sale!',
@@ -235,10 +231,6 @@ router.get('/success', async (req, res) => {
                     const Product = require('../models/Product');
                     const productObj = await Product.findById(pOrder.product);
                     if (productObj) {
-                        productObj.stock -= pOrder.quantity;
-                        if (productObj.stock < 0) productObj.stock = 0; // fallback safety
-                        await productObj.save();
-
                         const Notification = require('../models/Notification');
                         const notifySeller = new Notification({
                             user: productObj.seller,

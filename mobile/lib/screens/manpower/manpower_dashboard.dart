@@ -15,6 +15,7 @@ class ManpowerDashboard extends StatefulWidget {
 
 class _ManpowerDashboardState extends State<ManpowerDashboard> {
   String _userType = '';
+  String _userName = '';
 
   @override
   void initState() {
@@ -26,6 +27,7 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userType = prefs.getString('activeRole') ?? prefs.getString('userType') ?? 'Buyer';
+      _userName = prefs.getString('userName') ?? 'User';
     });
   }
 
@@ -41,9 +43,10 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const Text(
-              'Manpower Hub',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange),
+            Text(
+              'Welcome, $_userName\nManpower Hub',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             

@@ -7,7 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:nisk_app/services/api_service.dart';
 
 class PostJobScreen extends StatefulWidget {
-  const PostJobScreen({super.key});
+  final Map<String, dynamic>? existingData;
+  const PostJobScreen({super.key, this.existingData});
 
   @override
   State<PostJobScreen> createState() => _PostJobScreenState();
@@ -23,19 +24,42 @@ class _PostJobScreenState extends State<PostJobScreen> {
   final _descriptionController = TextEditingController();
   final _nicController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _categoryController = TextEditingController();
   
   XFile? _jobPicture;
   Uint8List? _webImageBytes;
   final ImagePicker _picker = ImagePicker();
   
-  String _selectedCategory = 'Hair Cutting';
   String _selectedJobType = 'Full Time';
   bool _isSubmitting = false;
+  bool _isLoadingData = false;
+  String? _existingId;
 
-  final List<String> _categories = [
-    'Hair Cutting', 'Mason', 'Carpenter', 'Doctor',
-    'Electrician', 'Plumber', 'cleaner', 'Facial'
-  ];
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingData != null) {
+      _loadData(widget.existingData!);
+    }
+  }
+
+  void _loadData(Map<String, dynamic> data) {
+    _existingId = data['_id'];
+    _titleController.text = data['title'] ?? '';
+    _companyController.text = data['company'] ?? '';
+    _categoryController.text = data['category'] ?? '';
+    _salaryController.text = (data['salary'] ?? '').toString();
+    _descriptionController.text = data['description'] ?? '';
+    _nicController.text = data['nicNumber'] ?? '';
+    _phoneController.text = data['phoneNumber'] ?? '';
+    
+    if (data['location'] != null && data['location']['city'] != null) {
+      _locationController.text = data['location']['city'];
+    }
+    if (data['jobType'] != null) {
+      _selectedJobType = data['jobType'];
+    }
+  }
 
   final List<String> _jobTypes = [
     'Full Time', 'Part Time', 'Temporary', 'Contract', 'Daily', 'Freelance'
@@ -63,7 +87,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       return;
     }
     
-    if (_jobPicture == null) {
+    if (_jobPicture == null && _existingId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please upload a photo for the job'), backgroundColor: Colors.red),
       );
@@ -76,7 +100,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       final payload = {
         'title': _titleController.text,
         'company': _companyController.text,
-        'category': _selectedCategory,
+        'category': _categoryController.text,
         'jobType': _selectedJobType,
         'location': jsonEncode({'city': _locationController.text}),
         'salary': _salaryController.text,
@@ -87,11 +111,19 @@ class _PostJobScreenState extends State<PostJobScreen> {
         'isVerified': 'true', // Auto-verify for testing purposes
       };
 
-      await ApiService().postMultipart('/manpower/jobs', payload, [_jobPicture!]);
+      if (_existingId != null) {
+        if (_jobPicture != null) {
+          await ApiService().putMultipart('/manpower/jobs/$_existingId', payload, [_jobPicture!]);
+        } else {
+          await ApiService().put('/manpower/jobs/$_existingId', payload);
+        }
+      } else {
+        await ApiService().postMultipart('/manpower/jobs', payload, _jobPicture != null ? [_jobPicture!] : []);
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile successfully posted! You are now visible to Employers.'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Profile successfully saved! You are now visible to Employers.'), backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       }
@@ -103,15 +135,54 @@ class _PostJobScreenState extends State<PostJobScreen> {
     }
   }
 
+  Future<void> _deleteJob() async {
+    try {
+      if (_existingId == null) return;
+      await ApiService().delete('/manpower/jobs/$_existingId');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job successfully deleted.')));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete job: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Post a Job'),
+        title: Text(_existingId != null ? 'EDIT SERVICE / JOB' : 'POST A SERVICE / JOB'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
+        actions: _existingId != null ? [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Job'),
+                  content: const Text('Are you sure you want to delete this job profile?'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deleteJob();
+                      },
+                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          )
+        ] : null,
       ),
-      body: Form(
+      body: _isLoadingData ? const Center(child: CircularProgressIndicator()) : Form(
         key: _formKey,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -175,11 +246,10 @@ class _PostJobScreenState extends State<PostJobScreen> {
                 validator: (value) => value == null || value.trim().isEmpty ? 'Company/Name is required' : null,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
+              TextFormField(
+                controller: _categoryController,
                 decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Service / Category ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
-                items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (val) => setState(() => _selectedCategory = val ?? 'Hair Cutting'),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Service/Category is required' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(

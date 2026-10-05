@@ -15,6 +15,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   List<dynamic> _sellerOrders = [];
+  List<dynamic> _myProducts = [];
   String _userName = 'Seller';
   String? _profilePic;
 
@@ -48,6 +49,12 @@ class _SellerDashboardState extends State<SellerDashboard> {
       if (response != null && mounted) {
         setState(() {
           _sellerOrders = response;
+        });
+      }
+      final productsRes = await _apiService.get('/products/me');
+      if (productsRes != null && mounted) {
+        setState(() {
+          _myProducts = productsRes;
         });
       }
     } catch (e) {
@@ -141,6 +148,35 @@ class _SellerDashboardState extends State<SellerDashboard> {
                 },
               )
             ),
+            const SizedBox(height: 24),
+            const Text('My Product Listings (Edit / Manage)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _myProducts.isEmpty 
+              ? const Padding(padding: EdgeInsets.all(20), child: Text('No products listed yet.', style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _myProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = _myProducts[index];
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: const Icon(Icons.inventory, color: Color(0xFFF57224)),
+                        title: Text(product['name'] ?? 'Product', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('${product['category'] ?? ''} - LKR ${product['price'] ?? 0}'),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => AddProductScreen(existingData: product))).then((_) => _fetchSellerOrders());
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF57224), foregroundColor: Colors.white),
+                          child: const Text('Edit'),
+                        ),
+                      ),
+                    );
+                  }
+              ),
           ],
         ),
       ),

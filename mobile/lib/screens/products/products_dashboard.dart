@@ -16,6 +16,7 @@ class ProductsDashboard extends StatefulWidget {
 
 class _ProductsDashboardState extends State<ProductsDashboard> {
   String _userType = '';
+  String _userName = '';
 
   @override
   void initState() {
@@ -27,6 +28,7 @@ class _ProductsDashboardState extends State<ProductsDashboard> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userType = prefs.getString('activeRole') ?? prefs.getString('userType') ?? 'Buyer';
+      _userName = prefs.getString('userName') ?? 'User';
     });
   }
 
@@ -43,9 +45,9 @@ class _ProductsDashboardState extends State<ProductsDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Marketplace Hub',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
+            Text(
+              'Welcome, $_userName\nMarketplace Hub',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),

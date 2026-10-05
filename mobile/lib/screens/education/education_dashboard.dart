@@ -15,6 +15,7 @@ class EducationDashboard extends StatefulWidget {
 
 class _EducationDashboardState extends State<EducationDashboard> {
   String _userType = '';
+  String _userName = '';
 
   @override
   void initState() {
@@ -26,6 +27,7 @@ class _EducationDashboardState extends State<EducationDashboard> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userType = prefs.getString('activeRole') ?? prefs.getString('userType') ?? 'Buyer';
+      _userName = prefs.getString('userName') ?? 'User';
     });
   }
 
@@ -41,9 +43,10 @@ class _EducationDashboardState extends State<EducationDashboard> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const Text(
-              'Education Hub',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.redAccent),
+            Text(
+              'Welcome, $_userName\nEducation Hub',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.redAccent),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             

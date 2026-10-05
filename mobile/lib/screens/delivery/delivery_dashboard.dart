@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DeliveryDashboard extends StatefulWidget {
   const DeliveryDashboard({super.key});
@@ -15,10 +16,20 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
   List<dynamic> _availableOrders = [];
   List<dynamic> _myDeliveries = [];
 
+  String _userName = 'Rider';
+
   @override
   void initState() {
     super.initState();
+    _loadUserName();
     _fetchDashboardData();
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'Rider';
+    });
   }
 
   Future<void> _fetchDashboardData() async {
@@ -66,7 +77,13 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('DELIVERY HUB', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('DELIVERY HUB', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('Welcome, $_userName', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal)),
+            ],
+          ),
           backgroundColor: Colors.teal,
           foregroundColor: Colors.white,
           actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchDashboardData)],

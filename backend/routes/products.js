@@ -5,8 +5,45 @@ const ProductOrder = require('../models/ProductOrder');
 const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
+// 1. Get My Products (Seller)
+router.get('/me', [auth, role(['Seller'])], async (req, res) => {
+    try {
+        const products = await Product.find({ seller: req.user.id });
+        res.json(products);
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
 
-// 1. Create Product (Seller / Production Provider)
+// 2. Update Product
+router.put('/:id', [auth, role(['Seller']), upload.array('images', 5)], async (req, res) => {
+    try {
+        const productData = req.body;
+        if (req.files && req.files.length > 0) {
+            productData.images = req.files.map(file => file.path);
+        }
+        const product = await Product.findOneAndUpdate(
+            { _id: req.params.id, seller: req.user.id },
+            { $set: productData },
+            { new: true }
+        );
+        res.json({ msg: 'Product updated', product });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 2b. Delete Product
+router.delete('/:id', [auth, role(['Seller'])], async (req, res) => {
+    try {
+        await Product.findOneAndDelete({ _id: req.params.id, seller: req.user.id });
+        res.json({ msg: 'Product deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// 3. Create Product (Seller / Production Provider)
 router.post('/', [auth, role(['Seller']), upload.array('images', 5)], async (req, res) => {
     try {
         const productData = req.body;
@@ -65,6 +102,9 @@ router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req
         if (!product || product.stock < quantity) {
             return res.status(400).json({ msg: 'Product unavailable or insufficient stock' });
         }
+
+        product.stock -= quantity;
+        await product.save();
 
         const subtotal = product.price * quantity;
         const total = subtotal + deliveryFee;

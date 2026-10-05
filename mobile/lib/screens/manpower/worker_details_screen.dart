@@ -165,6 +165,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
                     const Divider(),
                     const SizedBox(height: 16),
                     _buildInfoRow(Icons.location_on, 'Base Location', location),
+                    _buildInfoRow(Icons.schedule, 'Job Type', w['jobType'] ?? 'Full Time'),
                     _buildInfoRow(Icons.work, 'Experience Level', w['experienceLevel'] ?? 'Experienced'),
                     _buildInfoRow(Icons.category, 'Category', w['category'] ?? 'General Labor'),
                     const SizedBox(height: 16),

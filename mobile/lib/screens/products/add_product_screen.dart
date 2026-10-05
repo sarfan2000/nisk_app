@@ -6,7 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:nisk_app/services/api_service.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({super.key});
+  final Map<String, dynamic>? existingData;
+  const AddProductScreen({super.key, this.existingData});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -24,6 +25,26 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final ApiService _apiService = ApiService();
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
+  bool _isLoadingData = false;
+  String? _existingId;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingData != null) {
+      _loadData(widget.existingData!);
+    }
+  }
+
+  void _loadData(Map<String, dynamic> data) {
+    _existingId = data['_id'];
+    _nameController.text = data['name'] ?? '';
+    _categoryController.text = data['category'] ?? '';
+    _descController.text = data['description'] ?? '';
+    _priceController.text = (data['price'] ?? '').toString();
+    _stockController.text = (data['stock'] ?? '').toString();
+    _deliveryAvailable = data['deliveryAvailable'] ?? true;
+  }
 
   Future<void> _pickImage() async {
     final List<XFile> images = await _picker.pickMultiImage();
@@ -62,14 +83,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
         'deliveryAvailable': _deliveryAvailable.toString(),
       };
 
-      if (_selectedImages.isNotEmpty) {
-        await _apiService.postMultipart('/products', fields, _selectedImages);
+      if (_existingId != null) {
+        if (_selectedImages.isNotEmpty) {
+          await _apiService.putMultipart('/products/$_existingId', fields, _selectedImages);
+        } else {
+          await _apiService.put('/products/$_existingId', fields);
+        }
       } else {
-        await _apiService.post('/products', fields);
+        if (_selectedImages.isNotEmpty) {
+          await _apiService.postMultipart('/products', fields, _selectedImages);
+        } else {
+          await _apiService.post('/products', fields);
+        }
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Successfully sent your information, Admin will review this.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Successfully saved your information, Admin will review this.')));
         Navigator.pop(context, true); // Return true to refresh
       }
     } catch (e) {
@@ -80,15 +109,54 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
+  Future<void> _deleteProduct() async {
+    try {
+      if (_existingId == null) return;
+      await _apiService.delete('/products/$_existingId');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product successfully deleted.')));
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete product: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SELL YOUR PRODUCT'),
+        title: Text(_existingId != null ? 'EDIT YOUR PRODUCT' : 'SELL YOUR PRODUCT'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        actions: _existingId != null ? [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Product'),
+                  content: const Text('Are you sure you want to delete this product?'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deleteProduct();
+                      },
+                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          )
+        ] : null,
       ),
-      body: Form(
+      body: _isLoadingData ? const Center(child: CircularProgressIndicator()) : Form(
         key: _formKey,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),

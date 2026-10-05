@@ -1,7 +1,29 @@
 import 'package:flutter/material.dart';
 import 'admin_approvals_screen.dart';
-class AdminDashboard extends StatelessWidget {
+import 'package:shared_preferences/shared_preferences.dart';
+
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  String _userName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'Admin';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +38,8 @@ class AdminDashboard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Super Admin Overview', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text('Welcome, $_userName', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text('Super Admin Overview', style: const TextStyle(fontSize: 16, color: Colors.grey)),
             const SizedBox(height: 16),
             GridView.count(
               crossAxisCount: 2,

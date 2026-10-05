@@ -63,6 +63,7 @@ app.use('/api/operations', operationsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/suggestions', require('./routes/suggestions'));
 
 // Swagger Documentation Schema
 const swaggerOptions = {
