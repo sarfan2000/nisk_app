@@ -1,1 +1,0 @@
-const mongoose = require('mongoose'); mongoose.connect('mongodb://127.0.0.1:27017/nisk').then(async () => { const User = require('./models/User'); await User.updateOne({ phone: '0751111111' }, { $push: { roles: { role: 'Delivery', status: 'Active' } } }); console.log('Fixed DB'); process.exit(); });
