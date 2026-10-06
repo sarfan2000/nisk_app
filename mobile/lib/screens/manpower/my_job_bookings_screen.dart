@@ -43,7 +43,7 @@ class _MyJobBookingsScreenState extends State<MyJobBookingsScreen> {
       case 'admin_approved':
         return Colors.blue;
       case 'pending':
-        return Colors.orange;
+        return const Color(0xFFF1C40F);
       case 'failed':
       case 'rejected':
         return Colors.red;
@@ -57,7 +57,7 @@ class _MyJobBookingsScreenState extends State<MyJobBookingsScreen> {
       final body = {'status': newStatus};
       final response = await _apiService.patch('/manpower/bookings/$bookingId/status', body);
       if (response != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status updated successfully!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Status updated successfully!')));
         _fetchWorkerBookings(); // Refresh the list
       }
     } catch (e) {
@@ -71,7 +71,7 @@ class _MyJobBookingsScreenState extends State<MyJobBookingsScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('My Job Bookings', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -227,3 +227,4 @@ class _MyJobBookingsScreenState extends State<MyJobBookingsScreen> {
     );
   }
 }
+

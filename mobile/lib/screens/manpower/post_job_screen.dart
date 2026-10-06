@@ -32,7 +32,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
   
   String _selectedJobType = 'Full Time';
   bool _isSubmitting = false;
-  bool _isLoadingData = false;
+  final bool _isLoadingData = false;
   String? _existingId;
 
   @override
@@ -155,7 +155,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_existingId != null ? 'EDIT SERVICE / JOB' : 'POST A SERVICE / JOB'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
         actions: _existingId != null ? [
           IconButton(
@@ -215,7 +215,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nicController,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'NIC Number ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'NIC Number ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) return 'NIC Number is required';
                   if (value.trim().length != 12) return 'NIC must be exactly 12 characters';
@@ -225,7 +225,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Phone Number ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'Phone Number ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) return 'Phone Number is required';
@@ -236,38 +236,38 @@ class _PostJobScreenState extends State<PostJobScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Job Title ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'Job Title ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Job Title is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _companyController,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Company / Employer Name ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'Company / Employer Name ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Company/Name is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _categoryController,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Service / Category ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'Service / Category ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Service/Category is required' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedJobType,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Job Type ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                initialValue: _selectedJobType,
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'Job Type ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 items: _jobTypes.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (val) => setState(() => _selectedJobType = val ?? 'Full Time'),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _locationController,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'City / Location ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'City / Location ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Location is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _salaryController,
-                decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Salary / Rate (e.g. LKR 2000) ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
+                decoration: const InputDecoration(label: Text.rich(TextSpan(text: 'Salary / Rate (e.g. LKR 2000) ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Salary/Rate is required' : null,
               ),
               const SizedBox(height: 16),
@@ -280,7 +280,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _submitJob,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF1C40F), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
                 child: _isSubmitting 
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('POST JOB', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -292,3 +292,4 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 }
+

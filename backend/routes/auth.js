@@ -17,7 +17,7 @@ const User = require('../models/User');
 // 1. User Registration Route
 router.post('/register', async (req, res) => {
     try {
-        const { name, phone, email, password, userType, location } = req.body;
+        const { name, phone, email, password, userType, location, recoveryPin } = req.body;
 
         let userExists = await User.findOne({ phone });
         if (userExists) {
@@ -26,6 +26,12 @@ router.post('/register', async (req, res) => {
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Hash the 4-digit recovery PIN for extra security
+        let hashedRecoveryPin = undefined;
+        if (recoveryPin) {
+            hashedRecoveryPin = await bcrypt.hash(recoveryPin, salt);
+        }
 
         // Base roles: everyone is a Buyer by default. They also get the role they explicitly applied for.
         const activeRoles = ['Buyer'];
@@ -36,7 +42,7 @@ router.post('/register', async (req, res) => {
         let newRoles = activeRoles.map(r => ({ role: r, status: 'Active' }));
 
         const newUser = new User({
-            name, phone, email, password: hashedPassword, roles: newRoles, location, userType
+            name, phone, email, password: hashedPassword, recoveryPin: hashedRecoveryPin, roles: newRoles, location, userType
         });
 
         await newUser.save();
@@ -164,6 +170,40 @@ router.post('/upload-profile-pic', [auth, upload.array('images', 1)], async (req
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
+    }
+});
+
+// 7. Reset Password using Recovery PIN
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { phone, recoveryPin, newPassword } = req.body;
+
+        // 1. Find user by phone number
+        const user = await User.findOne({ phone });
+        if (!user) {
+            return res.status(404).json({ msg: 'Account with this phone number not found' });
+        }
+
+        // 2. Prevent crashing if an older user doesn't have a recovery PIN set
+        if (!user.recoveryPin) {
+            return res.status(400).json({ msg: 'This account does not have a setup recovery PIN' });
+        }
+
+        // 3. Securely verify if the provided 4-digit PIN matches the database
+        const isMatch = await bcrypt.compare(recoveryPin.toString(), user.recoveryPin);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Incorrect Recovery PIN' });
+        }
+
+        // 4. If PIN is correct, hash and save the new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.json({ msg: 'Password successfully reset! You can now login.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server Error' });
     }
 });
 

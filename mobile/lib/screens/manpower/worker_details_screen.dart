@@ -37,7 +37,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ORDER SUMMARY', style: TextStyle(color: Colors.orange)),
+        title: const Text('ORDER SUMMARY', style: TextStyle(color: Color(0xFFF1C40F))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +75,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
                   }
                 )));
              },
-             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF1C40F), foregroundColor: Colors.white),
              child: const Text('PROCEED TO PAYMENT'),
           )
         ],
@@ -98,7 +98,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Worker Profile'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -107,7 +107,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
           children: [
             // Header
             Container(
-              color: Colors.orange.shade50,
+              color: const Color(0xFFF1C40F).withValues(alpha: 0.1),
               padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
               child: Column(
                 children: [
@@ -174,7 +174,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
                     Wrap(
                       spacing: 8, runSpacing: 8,
                       children: skillsArray.split(',').map((skill) {
-                        return Chip(label: Text(skill.trim()), backgroundColor: Colors.orange.shade50);
+                        return Chip(label: Text(skill.trim()), backgroundColor: const Color(0xFFF1C40F).withValues(alpha: 0.1));
                       }).toList(),
                     )
                  ],
@@ -186,9 +186,9 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
       ),
       bottomSheet: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -5))]
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -5))]
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -203,7 +203,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
                   children: [
                     InkWell(
                       onTap: () { if(_numberOfDays>1) setState(() => _numberOfDays--); },
-                      child: const Icon(Icons.remove_circle, color: Colors.orange),
+                      child: const Icon(Icons.remove_circle, color: Color(0xFFF1C40F)),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -211,7 +211,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
                     ),
                     InkWell(
                       onTap: () { setState(() => _numberOfDays++); },
-                      child: const Icon(Icons.add_circle, color: Colors.orange),
+                      child: const Icon(Icons.add_circle, color: Color(0xFFF1C40F)),
                     ),
                   ],
                 )
@@ -220,7 +220,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
             ElevatedButton(
               onPressed: isAvailable ? _proceedToCheckout : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: const Color(0xFFF1C40F),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))
@@ -239,7 +239,7 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.orange, size: 28),
+          Icon(icon, color: const Color(0xFFF1C40F), size: 28),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -256,3 +256,4 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
     );
   }
 }
+

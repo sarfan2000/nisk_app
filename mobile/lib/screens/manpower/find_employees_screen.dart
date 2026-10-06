@@ -58,7 +58,7 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text('Hire Professionals'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
       ),
       body: Column(
@@ -71,7 +71,7 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search by category, location, title or name...',
-                prefixIcon: const Icon(Icons.search, color: Colors.orange),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFFF1C40F)),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -94,12 +94,12 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
           // Worker List Section
           Expanded(
             child: _isLoading 
-              ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFFF1C40F)))
               : _employees.isEmpty 
-                  ? Center(
+                  ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Icon(Icons.search_off, size: 64, color: Colors.grey),
                           SizedBox(height: 16),
                           Text('No professionals found matching these filters', style: TextStyle(color: Colors.grey)),
@@ -196,8 +196,8 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(20)),
-                          child: Text('Rate: $rate', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                          decoration: BoxDecoration(color: const Color(0xFFF1C40F).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                          child: Text('Rate: $rate', style: const TextStyle(color: Color(0xFFF1C40F), fontWeight: FontWeight.bold, fontSize: 12)),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -241,3 +241,4 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
     );
   }
 }
+

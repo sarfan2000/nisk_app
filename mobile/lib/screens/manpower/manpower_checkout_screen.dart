@@ -16,7 +16,7 @@ class ManpowerCheckoutScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('ORDER SUMMARY'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -85,8 +85,8 @@ class ManpowerCheckoutScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('TOTAL BILL', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange)),
-                Text('LKR $finalBill', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.orange)),
+                const Text('TOTAL BILL', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF1C40F))),
+                Text('LKR $finalBill', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFF1C40F))),
               ],
             )
           ],
@@ -112,11 +112,11 @@ class ManpowerCheckoutScreen extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => const AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            CircularProgressIndicator(color: Colors.orange),
+          children: [
+            CircularProgressIndicator(color: Color(0xFFF1C40F)),
             SizedBox(height: 16),
             Text('Redirecting to PayHere Secure Gateway...')
           ],
@@ -155,3 +155,4 @@ class ManpowerCheckoutScreen extends StatelessWidget {
     }
   }
 }
+

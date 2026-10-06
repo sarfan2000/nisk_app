@@ -51,14 +51,14 @@ class _MyManpowerHiresScreenState extends State<MyManpowerHiresScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text('MY HIRED TALENT', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchMyHires)
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFF1C40F)))
           : _bookings.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
@@ -91,13 +91,13 @@ class _MyManpowerHiresScreenState extends State<MyManpowerHiresScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: status == 'Accepted' ? Colors.green.shade100 : Colors.orange.shade100,
+                                    color: status == 'Accepted' ? Colors.green.shade100 : const Color(0xFFF1C40F).shade100,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     status.toUpperCase(),
                                     style: TextStyle(
-                                      color: status == 'Accepted' ? Colors.green.shade800 : Colors.orange.shade800,
+                                      color: status == 'Accepted' ? Colors.green.shade800 : const Color(0xFFF1C40F).shade800,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 10,
                                     ),
@@ -164,3 +164,4 @@ class _MyManpowerHiresScreenState extends State<MyManpowerHiresScreen> {
     );
   }
 }
+

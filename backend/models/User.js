@@ -22,6 +22,7 @@ const UserSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     status: { type: String, default: 'Active' },
     profilePic: { type: String, required: false },
+    recoveryPin: { type: String, required: false },
     createdAt: { type: Date, default: Date.now }
 });
 

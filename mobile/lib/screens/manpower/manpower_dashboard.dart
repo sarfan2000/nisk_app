@@ -36,7 +36,7 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('NISK MANPOWER'),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -45,7 +45,7 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
           children: [
             Text(
               'Welcome, $_userName\nManpower Hub',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFF1C40F)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -78,14 +78,14 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
               Container(
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.orange.shade200)),
+                decoration: BoxDecoration(color: const Color(0xFFF1C40F).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF1C40F).withValues(alpha: 0.3))),
                 child: Column(
                   children: [
-                    const Icon(Icons.security, color: Colors.orange, size: 40),
+                    const Icon(Icons.security, color: Color(0xFFF1C40F), size: 40),
                     const SizedBox(height: 12),
-                    const Text('Access Restricted', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.orange)),
+                    const Text('Access Restricted', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFF1C40F))),
                     const SizedBox(height: 8),
-                    Text('You are currently browsing securely in ${_userType.toUpperCase()} mode.\n\nPlease open the Side Menu and switch your profile to EMPLOYER or WORKER mode to access the Manpower Hub.', textAlign: TextAlign.center, style: TextStyle(color: Colors.orange.shade900)),
+                    Text('You are currently browsing securely in ${_userType.toUpperCase()} mode.\n\nPlease open the Side Menu and switch your profile to EMPLOYER or WORKER mode to access the Manpower Hub.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.black87)),
                   ],
                 ),
               ),
@@ -100,7 +100,7 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: Icon(icon, color: Colors.orange),
+        leading: Icon(icon, color: const Color(0xFFF1C40F)),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: onTap,
@@ -108,3 +108,4 @@ class _ManpowerDashboardState extends State<ManpowerDashboard> {
     );
   }
 }
+

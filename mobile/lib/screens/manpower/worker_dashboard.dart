@@ -91,7 +91,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('WORKER DASHBOARD', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
+        backgroundColor: const Color(0xFFF1C40F),
         foregroundColor: Colors.white,
         actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchWorkerBookings)],
       ),
@@ -102,7 +102,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(radius: 30, backgroundColor: Colors.orange, child: Icon(Icons.person, color: Colors.white)),
+              leading: const CircleAvatar(radius: 30, backgroundColor: Color(0xFFF1C40F), child: Icon(Icons.person, color: Colors.white)),
               title: Text('Welcome, $_userName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               subtitle: const Text('Manage your jobs.'),
               trailing: const Icon(Icons.edit, color: Colors.grey),
@@ -154,14 +154,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        leading: const Icon(Icons.work, color: Colors.orange),
+                        leading: const Icon(Icons.work, color: Color(0xFFF1C40F)),
                         title: Text(job['title'] ?? 'Job', style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text('${job['category'] ?? ''} - LKR ${job['salary'] ?? 0}'),
                         trailing: ElevatedButton(
                           onPressed: () {
                             Navigator.push(context, MaterialPageRoute(builder: (context) => PostJobScreen(existingData: job))).then((_) => _fetchWorkerBookings());
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF1C40F), foregroundColor: Colors.white),
                           child: const Text('Edit'),
                         ),
                       ),
@@ -204,10 +204,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                   Icon(status == 'Accepted' ? Icons.check_circle : Icons.pending, size: 16, color: status == 'Admin_Approved' ? Colors.orange : Colors.green),
+                   Icon(status == 'Accepted' ? Icons.check_circle : Icons.pending, size: 16, color: status == 'Admin_Approved' ? const Color(0xFFF1C40F) : Colors.green),
                    const SizedBox(width: 4),
                    Expanded(
-                     child: Text('Status: $status', style: TextStyle(color: status == 'Admin_Approved' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis, maxLines: 1),
+                     child: Text('Status: $status', style: TextStyle(color: status == 'Admin_Approved' ? const Color(0xFFF1C40F) : Colors.green, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis, maxLines: 1),
                    ),
                 ]
               )
@@ -226,3 +226,4 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 }
+
