@@ -94,20 +94,7 @@ router.post('/book', [auth, role(['Student'])], async (req, res) => {
 
         await booking.save();
 
-        // Trigger Notification to the Teacher
-        if (items && items.length > 0) {
-            for (let item of items) {
-                if (item.teacher) {
-                    const notify = new Notification({
-                        user: item.teacher,
-                        title: 'New Student Booking Pending Approval',
-                        message: `A student has booked you for ${item.numberOfClasses} classes. It is pending payment completion.`,
-                        type: 'Alert'
-                    });
-                    await notify.save();
-                }
-            }
-        }
+        // Removed premature notification. Teacher will only be notified when payment succeeds via webhook.
 
         res.status(201).json({ msg: 'Booking successful', booking });
     } catch (err) {
