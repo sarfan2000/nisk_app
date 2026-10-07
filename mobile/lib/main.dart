@@ -6,26 +6,41 @@ import 'package:nisk_app/screens/home_screen.dart';
 import 'package:nisk_app/screens/login_screen.dart';
 import 'package:nisk_app/screens/profile_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await EasyLocalization.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await EasyLocalization.ensureInitialized();
 
-  runApp(
-    EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('ta'), Locale('si')],
-      path: 'assets/locales',
-      fallbackLocale: const Locale('en'),
-      child: DevicePreview(
-        enabled: !kReleaseMode,
-        builder: (context) => const NiskApp(),
-      ),
-    )
-  );
+    runApp(
+      EasyLocalization(
+        supportedLocales: const [Locale('en'), Locale('ta'), Locale('si')],
+        path: 'assets/locales',
+        fallbackLocale: const Locale('en'),
+        child: DevicePreview(
+          enabled: !kReleaseMode,
+          builder: (context) => const NiskApp(),
+        ),
+      )
+    );
+  } catch (e, stackTrace) {
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SingleChildScrollView(
+              child: Text(
+                'CRITICAL STARTUP ERROR:\n$e\n\n$stackTrace',
+                style: const TextStyle(color: Colors.red, fontSize: 14),
+              ),
+            ),
+          ),
+        ),
+      )
+    );
+  }
 }
 
 final ValueNotifier<ThemeMode> globalThemeMode = ValueNotifier(ThemeMode.light);

@@ -6,7 +6,7 @@ const TeacherProfileSchema = new mongoose.Schema({
     experience: { type: String }, // e.g. "8 Years"
     subjects: [{ type: String }],
     grades: [{ type: String }],
-    modes: [{ type: String, enum: ['Online', 'Offline'] }],
+    modes: [{ type: String, enum: ['Online', 'Offline', 'Both'] }],
     location: { type: String },
     availableDays: [{ type: String }],
     availableTime: { type: String },
