@@ -64,7 +64,9 @@ router.get('/checkout/:orderId', async (req, res) => {
         const hash = crypto.createHash('md5').update(hashString).digest('hex').toUpperCase();
 
         // Dynamic base URL for Return, Cancel, and Notify
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        // Render uses a reverse proxy, so req.protocol sees 'http'. We must force HTTPS for PayHere in production.
+        const protocol = req.get('host').includes('localhost') ? 'http' : 'https';
+        const baseUrl = `${protocol}://${req.get('host')}`;
 
         // Serve HTML form that auto submits to Payhere Sandbox
         const html = `
