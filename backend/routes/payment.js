@@ -68,7 +68,11 @@ router.get('/checkout/:orderId', async (req, res) => {
         const protocol = req.get('host').includes('localhost') ? 'http' : 'https';
         const baseUrl = `${protocol}://${req.get('host')}`;
 
-        // Serve HTML form that auto submits to Payhere Sandbox
+        const payhereUrl = process.env.PAYHERE_IS_LIVE === 'true'
+            ? 'https://www.payhere.lk/pay/checkout'
+            : 'https://sandbox.payhere.lk/pay/checkout';
+
+        // Serve HTML form that auto submits to Payhere Sandbox/Live
         const html = `
         <!DOCTYPE html>
         <html>
@@ -76,7 +80,7 @@ router.get('/checkout/:orderId', async (req, res) => {
         <body>
             <h2 style="text-align:center; margin-top: 50px;">Redirecting to Secure Payment Gateway...</h2>
             <p style="text-align:center;">If you are not redirected automatically, please click the button below.</p>
-            <form id="payhere-form" method="post" action="https://sandbox.payhere.lk/pay/checkout" style="text-align:center;">   
+            <form id="payhere-form" method="post" action="${payhereUrl}" style="text-align:center;">   
                 <input type="hidden" name="merchant_id" value="${MERCHANT_ID}">    
                 <input type="hidden" name="return_url" value="${baseUrl}/api/payment/success?order_id=${orderId}">
                 <input type="hidden" name="cancel_url" value="${baseUrl}/api/payment/cancel?order_id=${orderId}">
@@ -104,7 +108,7 @@ router.get('/checkout/:orderId', async (req, res) => {
         `;
 
         // Override Helmet's strict CSP for this specific HTML page so the auto-submit JS runs
-        res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; form-action 'self' https://sandbox.payhere.lk;");
+        res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; form-action 'self' https://sandbox.payhere.lk https://www.payhere.lk;");
         res.send(html);
 
     } catch (err) {
