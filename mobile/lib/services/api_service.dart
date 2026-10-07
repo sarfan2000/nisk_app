@@ -5,11 +5,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 
 class ApiService {
-  // Automatically route to 10.0.2.2 if on Android Emulator, otherwise localhost
   static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5001/api';
-    // Use the computer's local IP address for real Android devices over Wi-Fi
-    return 'http://192.168.8.148:5001/api';
+    // API URL updated for remote Koyeb deployment
+    return 'https://nisk-app.onrender.com/api';
   }
 
   Future<String?> _getToken() async {

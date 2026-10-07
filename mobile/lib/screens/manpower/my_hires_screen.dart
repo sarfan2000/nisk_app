@@ -91,13 +91,13 @@ class _MyManpowerHiresScreenState extends State<MyManpowerHiresScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: status == 'Accepted' ? Colors.green.shade100 : const Color(0xFFF1C40F).shade100,
+                                    color: status == 'Accepted' ? Colors.green.shade100 : const Color(0xFFF1C40F).withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     status.toUpperCase(),
                                     style: TextStyle(
-                                      color: status == 'Accepted' ? Colors.green.shade800 : const Color(0xFFF1C40F).shade800,
+                                      color: status == 'Accepted' ? Colors.green.shade800 : const Color(0xFFB8950B),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 10,
                                     ),
