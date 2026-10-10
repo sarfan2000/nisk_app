@@ -131,11 +131,11 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
         setState(() => _isScreenSharing = false);
       } else {
         await _engine.startScreenCapture(const ScreenCaptureParameters2(captureAudio: true, captureVideo: true));
-        await _engine.updateChannelMediaOptions(const ChannelMediaOptions(
+        await _engine.updateChannelMediaOptions(ChannelMediaOptions(
           publishCameraTrack: false,
-          publishScreenTrack: true, // Desktop / Web
-          publishScreenCaptureVideo: true, // Mobile
-          publishScreenCaptureAudio: true, // Mobile
+          publishScreenTrack: kIsWeb ? true : false,
+          publishScreenCaptureVideo: kIsWeb ? false : true,
+          publishScreenCaptureAudio: kIsWeb ? false : true,
         ));
         setState(() => _isScreenSharing = true);
       }
@@ -171,8 +171,10 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
                             rtcEngine: _engine, 
                             canvas: VideoCanvas(
                               uid: 0, 
-                              sourceType: _isScreenSharing ? VideoSourceType.videoSourceScreen : VideoSourceType.videoSourceCamera
-                            )
+                              sourceType: _isScreenSharing ? VideoSourceType.videoSourceScreen : VideoSourceType.videoSourceCamera,
+                              renderMode: RenderModeType.renderModeHidden,
+                            ),
+                            useFlutterTexture: kIsWeb ? false : true,
                           ),
                         ))
                   : const CircularProgressIndicator(),
@@ -191,8 +193,12 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
       return AgoraVideoView(
         controller: VideoViewController.remote(
           rtcEngine: _engine,
-          canvas: VideoCanvas(uid: _remoteUid),
+          canvas: VideoCanvas(
+            uid: _remoteUid,
+            renderMode: RenderModeType.renderModeHidden,
+          ),
           connection: RtcConnection(channelId: widget.channelName),
+          useFlutterTexture: kIsWeb ? false : true,
         ),
       );
     } else {
