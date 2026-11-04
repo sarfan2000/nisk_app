@@ -82,11 +82,20 @@ router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
             const numClasses = Math.max(1, parseInt(item.numberOfClasses) || 1);
             let rate = Math.max(0, parseFloat(item.ratePerClass) || 0);
 
-            // If a teacher is specified, verify against TeacherProfile hourly rate
+            // ✅ FIX: Verify rate from TeacherRate (subject+grade+mode specific), 
+            //         fallback to TeacherProfile hourlyRate, then client-sent rate
             if (item.teacher) {
-                const profile = await TeacherProfile.findOne({ user: item.teacher });
-                if (profile && profile.hourlyRate > 0) {
-                    rate = profile.hourlyRate;
+                const specificRate = await TeacherRate.findOne({
+                    teacher: item.teacher,
+                    mode: mode || 'Online'
+                });
+                if (specificRate && specificRate.ratePerClass > 0) {
+                    rate = specificRate.ratePerClass;
+                } else {
+                    const profile = await TeacherProfile.findOne({ user: item.teacher });
+                    if (profile && profile.hourlyRate > 0) {
+                        rate = profile.hourlyRate;
+                    }
                 }
             }
 
@@ -112,7 +121,7 @@ router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
             student: studentId,
             bookingId,
             mode: mode || 'Online',
-            grade: gradeId || 'Standard',
+            grade: gradeId,           // ✅ FIX: use gradeId as-is (ObjectId from client); never use 'Standard' string fallback
             items: validatedItems,
             totalSubtotal,
             serviceCharge: validServiceCharge,
@@ -145,12 +154,14 @@ router.get('/my-bookings', [auth, role(['Student', 'Buyer'])], async (req, res) 
 });
 
 // 7. Get Teacher Bookings (Teacher view)
+// Shows Admin_Approved (waiting for teacher action) + Teacher_Approved + Completed
 router.get('/teacher-bookings', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const teacherId = req.user.id;
         const bookings = await Booking.find({
             'items.teacher': teacherId,
-            status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] }
+            paymentStatus: 'Completed',                                           // ✅ only paid bookings
+            status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] } // ✅ relevant statuses
         })
             .populate('student', 'name email phone')
             .sort({ createdAt: -1 });
@@ -161,11 +172,20 @@ router.get('/teacher-bookings', [auth, role(['Teacher'])], async (req, res) => {
 });
 
 // 8. Update Booking Status (Teacher logic)
+// ✅ FIX: Accept BOTH bookingId string (e.g. BK123) and MongoDB _id for flexibility
 router.patch('/bookings/:bookingId/status', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const { status } = req.body;
+        const param = req.params.bookingId;
+
+        // Determine if param is a MongoDB ObjectId or a bookingId string
+        const isObjectId = /^[a-f\d]{24}$/i.test(param);
+        const query = isObjectId
+            ? { _id: param, 'items.teacher': req.user.id }
+            : { bookingId: param, 'items.teacher': req.user.id };
+
         const booking = await Booking.findOneAndUpdate(
-            { bookingId: req.params.bookingId, 'items.teacher': req.user.id },
+            query,
             { status: status },
             { new: true }
         );
@@ -190,10 +210,22 @@ router.patch('/bookings/:bookingId/status', [auth, role(['Teacher'])], async (re
 router.patch('/bookings/:bookingId/schedule', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const { arrangedStartTime, arrangedEndTime } = req.body;
+
+        if (!arrangedStartTime) {
+            return res.status(400).json({ msg: 'arrangedStartTime is required' });
+        }
+
         const meetingRoomId = 'ROOM_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
+        // ✅ FIX: Accept both _id and bookingId; also set status to Teacher_Approved when scheduling
+        const param = req.params.bookingId;
+        const isObjectId = /^[a-f\d]{24}$/i.test(param);
+        const query = isObjectId
+            ? { _id: param, 'items.teacher': req.user.id }
+            : { bookingId: param, 'items.teacher': req.user.id };
+
         const booking = await Booking.findOneAndUpdate(
-            { bookingId: req.params.bookingId, 'items.teacher': req.user.id },
+            query,
             { arrangedStartTime, arrangedEndTime, meetingRoomId, status: 'Teacher_Approved' },
             { new: true }
         );

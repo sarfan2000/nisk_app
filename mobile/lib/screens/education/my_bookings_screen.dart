@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../education/live_class_screen.dart';
@@ -213,7 +213,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    bookingStatus == 'Accepted' ? Icons.check_circle : (bookingStatus == 'Pending' ? Icons.access_time : Icons.cancel),
+                                    (bookingStatus == 'Teacher_Approved' || bookingStatus == 'Admin_Approved' || bookingStatus == 'Accepted' || bookingStatus == 'Completed') ? Icons.check_circle : (bookingStatus == 'Pending' ? Icons.access_time : Icons.cancel),
                                     color: _getStatusColor(bookingStatus),
                                     size: 16,
                                   ),
