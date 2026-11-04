@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
             if (req.query.subject) filter.subjects = { $in: [req.query.subject] };
             if (req.query.grade) filter.grades = { $in: [req.query.grade] };
             if (req.query.mode) filter.modes = { $in: [req.query.mode] };
-            if (req.query.location) filter.location = new RegExp(req.query.location, 'i'); // case-insensitive match
+            if (req.query.location) filter.location = new RegExp(req.query.location, 'i');
         }
 
         const profiles = await TeacherProfile.find(filter).populate('user', 'name phone location isVerified status');
@@ -115,24 +115,32 @@ router.patch('/verify/:profileId', [require('../middleware/auth'), require('../m
     }
 });
 
-// Register / Update Teacher Profile
+// Register / Update Teacher Profile (Protected against IDOR)
 router.post('/profile/:userId', [require('../middleware/auth'), upload.array('images', 1)], async (req, res) => {
     try {
         const { qualifications, experience, shortDescription, availableDays, availableTime, bankInformation, hourlyRate, subjects, grades, modes, location } = req.body;
 
-        const userIdToUse = req.params.userId === 'me' ? req.user.id : req.params.userId;
+        const isAdmin = req.user.userType === 'Admin' || (req.user.roles && req.user.roles.some(r => r.role === 'Admin' && r.status === 'Active'));
+        if (req.params.userId !== 'me' && req.params.userId !== req.user.id && !isAdmin) {
+            return res.status(403).json({ msg: 'Access denied: You can only update your own teacher profile' });
+        }
+
+        const userIdToUse = (req.params.userId === 'me' || !isAdmin) ? req.user.id : req.params.userId;
         let profile = await TeacherProfile.findOne({ user: userIdToUse });
 
         if (req.files && req.files.length > 0) {
             req.body.profilePicture = req.files[0].path;
         }
 
-        if (subjects) req.body.subjects = JSON.parse(subjects);
-        if (grades) req.body.grades = JSON.parse(grades);
-        if (modes) req.body.modes = JSON.parse(modes);
+        try {
+            if (subjects) req.body.subjects = typeof subjects === 'string' ? JSON.parse(subjects) : subjects;
+            if (grades) req.body.grades = typeof grades === 'string' ? JSON.parse(grades) : grades;
+            if (modes) req.body.modes = typeof modes === 'string' ? JSON.parse(modes) : modes;
+        } catch (parseErr) {
+            console.warn('JSON parse warning on profile fields:', parseErr);
+        }
 
         if (profile) {
-            // Update
             profile = await TeacherProfile.findOneAndUpdate(
                 { user: userIdToUse },
                 { $set: req.body },
@@ -141,27 +149,27 @@ router.post('/profile/:userId', [require('../middleware/auth'), upload.array('im
         } else {
             profile = new TeacherProfile({
                 user: userIdToUse,
-                qualifications,
-                experience,
-                shortDescription,
-                availableDays,
-                availableTime,
-                hourlyRate,
+                qualifications: req.body.qualifications || [],
+                experience: experience || '',
+                shortDescription: shortDescription || '',
+                availableDays: req.body.availableDays || [],
+                availableTime: availableTime || '',
+                hourlyRate: Math.max(0, parseFloat(hourlyRate) || 0),
                 subjects: req.body.subjects || [],
                 grades: req.body.grades || [],
                 modes: req.body.modes || [],
                 location: location || '',
-                bankInformation,
+                bankInformation: bankInformation || '',
                 profilePicture: req.body.profilePicture || '',
-                isApproved: true, // Hybrid Model: Show immediately
-                isVerified: false // Needs Admin Badge
+                isApproved: true,
+                isVerified: false
             });
             await profile.save();
         }
 
         res.json({ msg: 'Teacher profile updated', profile });
     } catch (err) {
-        console.error(err);
+        console.error('Teacher profile error:', err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
@@ -169,7 +177,6 @@ router.post('/profile/:userId', [require('../middleware/auth'), upload.array('im
 // Get Teacher Bookings
 router.get('/bookings/me', [require('../middleware/auth'), require('../middleware/role')(['Teacher'])], async (req, res) => {
     try {
-        // Find bookings where admin has approved
         const bookings = await Booking.find({
             'items.teacher': req.user.id,
             status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] }
@@ -191,7 +198,7 @@ router.patch('/booking/:bookingId/status', [require('../middleware/auth'), requi
         const booking = await Booking.findOneAndUpdate({ _id: req.params.bookingId, 'items.teacher': req.user.id }, { status }, { new: true }).populate('student', 'name');
 
         if (booking && booking.student) {
-            let message = `Your booking for ${booking.items[0]?.subject?.name || 'a class'} has been ${status} by the teacher.`;
+            let message = `Your booking has been ${status} by the teacher.`;
             if (status === 'Teacher_Approved') {
                 message = 'Approved by teacher, live session link started.';
             }

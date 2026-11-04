@@ -7,7 +7,7 @@ const role = require('../middleware/role');
 // Create service request
 router.post('/request', [auth, role(['Buyer', 'Employer'])], async (req, res) => {
     try {
-        const { customerId, serviceCategory, details, location, date, time } = req.body;
+        const { serviceCategory, details, location, date, time } = req.body;
 
         const request = new ServiceRequest({
             customer: req.user.id,
@@ -29,7 +29,7 @@ router.post('/request', [auth, role(['Buyer', 'Employer'])], async (req, res) =>
 // Get all requests
 router.get('/', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
-        const requests = await ServiceRequest.find().populate('Buyer', 'name phone').populate('provider', 'name phone');
+        const requests = await ServiceRequest.find().populate('customer', 'name phone').populate('provider', 'name phone');
         res.json(requests);
     } catch (err) {
         console.error(err);

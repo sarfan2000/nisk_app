@@ -5,6 +5,7 @@ const ProductOrder = require('../models/ProductOrder');
 const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
+
 // 1. Get My Products (Seller)
 router.get('/me', [auth, role(['Seller'])], async (req, res) => {
     try {
@@ -48,14 +49,13 @@ router.post('/', [auth, role(['Seller']), upload.array('images', 5)], async (req
     try {
         const productData = req.body;
 
-        // Map Cloudinary secure URLs securely if files exist
         if (req.files && req.files.length > 0) {
             productData.images = req.files.map(file => file.path);
         }
 
         const product = new Product({
             ...productData,
-            seller: req.user.id // Enforced by auth
+            seller: req.user.id
         });
 
         await product.save();
@@ -92,33 +92,35 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 3. Purchase / Create Order (Customer)
+// 3. Purchase / Create Order (Customer) - Server-verified pricing
 router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req, res) => {
     try {
         const { productId, quantity, deliveryLocation, deliveryFee } = req.body;
         const customerId = req.user.id;
+        const orderQty = Math.max(1, parseInt(quantity) || 1);
 
         const product = await Product.findById(productId);
-        if (!product || product.stock < quantity) {
+        if (!product || product.stock < orderQty) {
             return res.status(400).json({ msg: 'Product unavailable or insufficient stock' });
         }
 
-        product.stock -= quantity;
+        product.stock -= orderQty;
         await product.save();
 
-        const subtotal = product.price * quantity;
-        const total = subtotal + deliveryFee;
+        const validDeliveryFee = Math.max(0, parseFloat(deliveryFee) || 0);
+        const subtotal = product.price * orderQty;
+        const total = subtotal + validDeliveryFee;
         const orderId = 'PR' + Date.now() + Math.random().toString().slice(2, 6);
 
         const order = new ProductOrder({
             orderId,
             customer: customerId,
             product: productId,
-            quantity,
-            deliveryLocation,
+            quantity: orderQty,
+            deliveryLocation: deliveryLocation || 'Standard Delivery',
             unitPrice: product.price,
             subtotal,
-            deliveryFee,
+            deliveryFee: validDeliveryFee,
             total
         });
 
@@ -126,6 +128,7 @@ router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req
 
         res.status(201).json({ msg: 'Order placed successfully', order, paymentUrl: `/api/payment/checkout/${orderId}` });
     } catch (err) {
+        console.error('Product order error:', err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
@@ -184,7 +187,6 @@ router.patch('/orders/:orderId/status', [auth, role(['Seller'])], async (req, re
 
             if (orderStatus === 'Packed') {
                 const User = require('../models/User');
-                // Fix: 'roles' is an array of objects, must query 'roles.role'
                 const deliveryBoys = await User.find({ 'roles.role': 'Delivery' });
 
                 if (deliveryBoys.length > 0) {

@@ -4,6 +4,7 @@ const Grade = require('../models/Grade');
 const Subject = require('../models/Subject');
 const User = require('../models/User');
 const TeacherRate = require('../models/TeacherRate');
+const TeacherProfile = require('../models/TeacherProfile');
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
@@ -63,51 +64,75 @@ router.get('/teacher-rate', async (req, res) => {
     }
 });
 
-// 5. Checkout & Booking
-router.post('/book', [auth, role(['Student'])], async (req, res) => {
+// 5. Checkout & Booking (Server-side price verification)
+router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
     try {
         const { mode, gradeId, items, serviceCharge, discount } = req.body;
         const studentId = req.user.id;
 
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ msg: 'Booking items are required' });
+        }
+
         let totalSubtotal = 0;
+        const validatedItems = [];
 
-        // Calculate subtotal
-        items.forEach(item => {
-            totalSubtotal += item.ratePerClass * item.numberOfClasses;
-            item.subtotal = item.ratePerClass * item.numberOfClasses;
-        });
+        // Verify and calculate server-side pricing
+        for (const item of items) {
+            const numClasses = Math.max(1, parseInt(item.numberOfClasses) || 1);
+            let rate = Math.max(0, parseFloat(item.ratePerClass) || 0);
 
-        const totalBill = totalSubtotal + serviceCharge - discount;
-        const bookingId = 'BK' + Date.now(); // Simple ID generation
+            // If a teacher is specified, verify against TeacherProfile hourly rate
+            if (item.teacher) {
+                const profile = await TeacherProfile.findOne({ user: item.teacher });
+                if (profile && profile.hourlyRate > 0) {
+                    rate = profile.hourlyRate;
+                }
+            }
+
+            const itemSubtotal = rate * numClasses;
+            totalSubtotal += itemSubtotal;
+
+            validatedItems.push({
+                subject: item.subject || 'Tuition',
+                teacher: item.teacher,
+                ratePerClass: rate,
+                numberOfClasses: numClasses,
+                schedule: item.schedule || 'Flexible',
+                subtotal: itemSubtotal
+            });
+        }
+
+        const validServiceCharge = Math.max(0, parseFloat(serviceCharge) || 0);
+        const validDiscount = Math.max(0, parseFloat(discount) || 0);
+        const totalBill = Math.max(0, totalSubtotal + validServiceCharge - validDiscount);
+        const bookingId = 'BK' + Date.now();
 
         const booking = new Booking({
             student: studentId,
             bookingId,
-            mode,
-            grade: gradeId,
-            items,
+            mode: mode || 'Online',
+            grade: gradeId || 'Standard',
+            items: validatedItems,
             totalSubtotal,
-            serviceCharge,
-            discount,
+            serviceCharge: validServiceCharge,
+            discount: validDiscount,
             totalBill
         });
 
         await booking.save();
 
-        // Removed premature notification. Teacher will only be notified when payment succeeds via webhook.
-
         res.status(201).json({ msg: 'Booking successful', booking });
     } catch (err) {
-        console.error(err);
+        console.error('Education book error:', err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
 
 // 6. Get My Bookings (Student)
-router.get('/my-bookings', [auth, role(['Student'])], async (req, res) => {
+router.get('/my-bookings', [auth, role(['Student', 'Buyer'])], async (req, res) => {
     try {
         const studentId = req.user.id;
-        // Find all bookings for this student, gracefully populate the teacher names if needed
         const bookings = await Booking.find({ student: studentId })
             .populate('items.teacher', 'name status isVerified')
             .sort({ createdAt: -1 });
@@ -123,7 +148,6 @@ router.get('/my-bookings', [auth, role(['Student'])], async (req, res) => {
 router.get('/teacher-bookings', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const teacherId = req.user.id;
-        // Teacher only sees bookings that Admin has approved
         const bookings = await Booking.find({
             'items.teacher': teacherId,
             status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] }
@@ -148,7 +172,6 @@ router.patch('/bookings/:bookingId/status', [auth, role(['Teacher'])], async (re
 
         if (!booking) return res.status(404).json({ msg: 'Booking not found' });
 
-        // Notify Student
         const notify = new Notification({
             user: booking.student,
             title: 'Booking Update',
@@ -167,8 +190,6 @@ router.patch('/bookings/:bookingId/status', [auth, role(['Teacher'])], async (re
 router.patch('/bookings/:bookingId/schedule', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const { arrangedStartTime, arrangedEndTime } = req.body;
-
-        // Generate a random meeting room ID for this class
         const meetingRoomId = 'ROOM_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
         const booking = await Booking.findOneAndUpdate(
@@ -179,7 +200,6 @@ router.patch('/bookings/:bookingId/schedule', [auth, role(['Teacher'])], async (
 
         if (!booking) return res.status(404).json({ msg: 'Booking not found' });
 
-        // Notify Student
         const notify = new Notification({
             user: booking.student,
             title: 'Live Class Scheduled!',
@@ -194,11 +214,29 @@ router.patch('/bookings/:bookingId/schedule', [auth, role(['Teacher'])], async (
     }
 });
 
-// 10. Get Agora RTC Token
+// 10. Get Agora RTC Token (Protected & Authorized)
 router.get('/agora-token', auth, async (req, res) => {
     try {
         const { channelName } = req.query;
         if (!channelName) return res.status(400).json({ msg: 'channelName is required' });
+
+        // Authorization check: Verify user is a student, teacher, or admin for this class
+        const booking = await Booking.findOne({
+            $or: [
+                { meetingRoomId: channelName },
+                { bookingId: channelName }
+            ]
+        });
+
+        const isAdmin = req.user.userType === 'Admin' || (req.user.roles && req.user.roles.some(r => r.role === 'Admin' && r.status === 'Active'));
+
+        if (booking && !isAdmin) {
+            const isStudent = booking.student.toString() === req.user.id;
+            const isTeacher = booking.items.some(i => i.teacher && i.teacher.toString() === req.user.id);
+            if (!isStudent && !isTeacher) {
+                return res.status(403).json({ msg: 'Access denied: You are not authorized for this live class' });
+            }
+        }
 
         const appID = process.env.AGORA_APP_ID;
         const appCertificate = process.env.AGORA_APP_CERT;
@@ -215,7 +253,7 @@ router.get('/agora-token', auth, async (req, res) => {
 
         res.json({ token, channelName, uid, appID });
     } catch (err) {
-        console.error(err);
+        console.error('Agora token generation error:', err);
         res.status(500).json({ msg: 'Server error' });
     }
 });

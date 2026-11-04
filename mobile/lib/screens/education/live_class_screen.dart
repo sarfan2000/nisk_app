@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
@@ -17,7 +16,7 @@ class LiveClassScreen extends StatefulWidget {
 class _LiveClassScreenState extends State<LiveClassScreen> {
   int? _remoteUid;
   bool _localUserJoined = false;
-  late RtcEngine _engine;
+  RtcEngine? _engine;
   bool _muted = false;
   bool _videoDisabled = false;
   bool _isScreenSharing = false;
@@ -29,26 +28,23 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
   }
 
   Future<void> initAgora() async {
-    // retrieve permissions (not required/supported on Web via permission_handler)
     if (!kIsWeb) {
       await [Permission.microphone, Permission.camera].request();
     }
 
-    // fetch token and app id from backend
     final ApiService api = ApiService();
     try {
       final response = await api.get('/education/agora-token?channelName=${widget.channelName}');
       String token = response['token'];
       String appId = response['appID'];
       
-      // create the engine
-      _engine = createAgoraRtcEngine();
-      await _engine.initialize(RtcEngineContext(
+      final engine = createAgoraRtcEngine();
+      await engine.initialize(RtcEngineContext(
         appId: appId,
         channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
       ));
 
-      _engine.registerEventHandler(
+      engine.registerEventHandler(
         RtcEngineEventHandler(
           onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
             debugPrint("local user ${connection.localUid} joined");
@@ -62,9 +58,6 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
             debugPrint("remote user $remoteUid left channel");
             if (mounted) setState(() => _remoteUid = null);
           },
-          onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
-            debugPrint('[onTokenPrivilegeWillExpire] connection: ${connection.toJson()}, token: $token');
-          },
           onError: (ErrorCodeType err, String msg) {
             debugPrint('[onError] err: $err, msg: $msg');
             if (mounted) {
@@ -74,12 +67,12 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
         ),
       );
 
-      await _engine.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
-      await _engine.enableAudio();
-      await _engine.enableVideo();
-      await _engine.startPreview();
+      await engine.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
+      await engine.enableAudio();
+      await engine.enableVideo();
+      await engine.startPreview();
 
-      await _engine.joinChannel(
+      await engine.joinChannel(
         token: token,
         channelId: widget.channelName,
         uid: 0,
@@ -89,6 +82,12 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
           publishMicrophoneTrack: true,
         ),
       );
+
+      if (mounted) {
+        setState(() {
+          _engine = engine;
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to join room: $e')));
@@ -99,45 +98,52 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
 
   @override
   void dispose() {
-    super.dispose();
     _dispose();
+    super.dispose();
   }
 
   Future<void> _dispose() async {
-    await _engine.leaveChannel();
-    await _engine.release();
+    if (_engine != null) {
+      try {
+        await _engine!.leaveChannel();
+        await _engine!.release();
+      } catch (_) {}
+    }
   }
 
   void _onToggleMute() {
+    if (_engine == null) return;
     setState(() => _muted = !_muted);
-    _engine.muteLocalAudioStream(_muted);
+    _engine!.muteLocalAudioStream(_muted);
   }
 
   void _onToggleVideo() {
+    if (_engine == null) return;
     setState(() => _videoDisabled = !_videoDisabled);
-    _engine.muteLocalVideoStream(_videoDisabled);
+    _engine!.muteLocalVideoStream(_videoDisabled);
   }
 
   Future<void> _onToggleScreenShare() async {
+    if (_engine == null) return;
     try {
       if (_isScreenSharing) {
-        await _engine.stopScreenCapture();
-        await _engine.updateChannelMediaOptions(const ChannelMediaOptions(
+        await _engine!.stopScreenCapture();
+        await _engine!.updateChannelMediaOptions(const ChannelMediaOptions(
           publishCameraTrack: true,
           publishScreenTrack: false,
           publishScreenCaptureVideo: false,
           publishScreenCaptureAudio: false,
         ));
-        setState(() => _isScreenSharing = false);
+        if (mounted) setState(() => _isScreenSharing = false);
       } else {
-        await _engine.startScreenCapture(const ScreenCaptureParameters2(captureAudio: true, captureVideo: true));
-        await _engine.updateChannelMediaOptions(ChannelMediaOptions(
+        await _engine!.startScreenCapture(const ScreenCaptureParameters2(captureAudio: true, captureVideo: true));
+        await _engine!.updateChannelMediaOptions(ChannelMediaOptions(
           publishCameraTrack: false,
           publishScreenTrack: kIsWeb ? true : false,
           publishScreenCaptureVideo: kIsWeb ? false : true,
           publishScreenCaptureAudio: kIsWeb ? false : true,
         ));
-        setState(() => _isScreenSharing = true);
+        if (mounted) setState(() => _isScreenSharing = true);
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Screen share error: $e')));
@@ -163,12 +169,12 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
               width: 120,
               height: 160,
               child: Center(
-                child: _localUserJoined
+                child: _localUserJoined && _engine != null
                   ? (_videoDisabled && !_isScreenSharing
                       ? Container(color: Colors.black, child: const Center(child: Icon(Icons.videocam_off, color: Colors.white)))
                       : AgoraVideoView(
                           controller: VideoViewController(
-                            rtcEngine: _engine, 
+                            rtcEngine: _engine!, 
                             canvas: VideoCanvas(
                               uid: 0, 
                               sourceType: _isScreenSharing ? VideoSourceType.videoSourceScreen : VideoSourceType.videoSourceCamera,
@@ -187,12 +193,11 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
     );
   }
 
-  // Display remote user's video
   Widget _remoteVideo() {
-    if (_remoteUid != null) {
+    if (_remoteUid != null && _engine != null) {
       return AgoraVideoView(
         controller: VideoViewController.remote(
-          rtcEngine: _engine,
+          rtcEngine: _engine!,
           canvas: VideoCanvas(
             uid: _remoteUid,
             renderMode: RenderModeType.renderModeHidden,

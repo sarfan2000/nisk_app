@@ -3,6 +3,8 @@ const router = express.Router();
 const Job = require('../models/Job');
 const WorkerProfile = require('../models/WorkerProfile');
 const JobApplication = require('../models/JobApplication');
+const ManpowerBooking = require('../models/ManpowerBooking');
+const Notification = require('../models/Notification');
 const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
@@ -96,12 +98,11 @@ router.patch('/jobs/verify/:jobId', [auth, role(['Admin', 'Super Admin'])], asyn
 router.get('/jobs', async (req, res) => {
     try {
         const { category, jobType, district } = req.query;
-        let query = { isActive: true }; // Temporarily relaxed isVerified so they can see all tests
+        let query = { isActive: true };
 
         if (req.query.search) {
             const regex = new RegExp(req.query.search, 'i');
             const User = require('../models/User');
-            // Two-step to find employer by name
             const matchingEmployers = await User.find({ name: regex }).select('_id');
             const employerIds = matchingEmployers.map(u => u._id);
 
@@ -154,7 +155,7 @@ router.post('/apply/:jobId', [auth, role(['Worker']), upload.array('images', 1)]
 // Search Jobs (Worker) / Get Employees
 router.get('/jobs/filters', async (req, res) => {
     try {
-        let match = { isActive: true }; // Temporarily relaxed isVerified
+        let match = { isActive: true };
         if (req.query.category) match.category = req.query.category;
 
         const jobs = await Job.find(match);
@@ -216,14 +217,24 @@ router.post('/worker/profile/:userId', [auth, role(['Worker']), upload.array('im
     }
 });
 
-// 5. Book a Worker
-const ManpowerBooking = require('../models/ManpowerBooking');
-const Notification = require('../models/Notification'); // Needed for notifications
-
+// 5. Book a Worker (Server-side price verification)
 router.post('/book', [auth, role(['Employer', 'Buyer'])], async (req, res) => {
     try {
-        const { workerId, jobCategory, duration, rate, serviceCharge, total } = req.body;
-        const subtotal = rate * duration;
+        const { workerId, jobCategory, duration, rate, serviceCharge } = req.body;
+        const validDuration = Math.max(1, parseFloat(duration) || 1);
+        let validRate = Math.max(0, parseFloat(rate) || 0);
+
+        if (workerId) {
+            const workerProfile = await WorkerProfile.findOne({ user: workerId });
+            if (workerProfile && workerProfile.expectedSalary) {
+                const parsedRate = parseFloat(workerProfile.expectedSalary.replace(/[^0-9.]/g, ''));
+                if (parsedRate && parsedRate > 0) validRate = parsedRate;
+            }
+        }
+
+        const validServiceCharge = Math.max(0, parseFloat(serviceCharge) || 0);
+        const subtotal = validRate * validDuration;
+        const total = subtotal + validServiceCharge;
 
         const orderId = 'MP' + Date.now() + Math.random().toString().slice(2, 6);
 
@@ -231,11 +242,11 @@ router.post('/book', [auth, role(['Employer', 'Buyer'])], async (req, res) => {
             orderId,
             customer: req.user.id,
             worker: workerId,
-            jobCategory,
-            duration,
-            rate,
+            jobCategory: jobCategory || 'General Labor',
+            duration: validDuration,
+            rate: validRate,
             subtotal,
-            serviceCharge,
+            serviceCharge: validServiceCharge,
             total
         });
 
@@ -245,14 +256,14 @@ router.post('/book', [auth, role(['Employer', 'Buyer'])], async (req, res) => {
         const notify = new Notification({
             user: workerId,
             title: 'New Manpower Booking',
-            message: `An employer has booked you for ${duration} units of ${jobCategory}. It is pending payment completion.`,
+            message: `An employer has booked you for ${validDuration} units of ${jobCategory || 'General Labor'}. Total: LKR ${total}. Pending payment completion.`,
             type: 'Alert'
         });
         await notify.save();
 
         res.status(201).json({ msg: 'Booking placed successfully', booking, paymentUrl: `/api/payment/checkout/${orderId}` });
     } catch (err) {
-        console.error(err);
+        console.error('Manpower booking error:', err);
         res.status(500).json({ msg: 'Server error' });
     }
 });

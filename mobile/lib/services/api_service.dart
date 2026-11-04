@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 
 class ApiService {
   static String get baseUrl {
-    // API URL updated for remote Koyeb deployment
     return 'https://nisk-app.onrender.com/api';
   }
 
@@ -26,15 +25,24 @@ class ApiService {
   }
 
   dynamic _extractError(http.Response response) {
+    String? message;
     try {
       final decoded = json.decode(response.body);
-      if (decoded != null && decoded['msg'] != null) {
-        throw Exception(decoded['msg']);
+      if (decoded is Map) {
+        if (decoded['msg'] != null) {
+          message = decoded['msg'].toString();
+        } else if (decoded['message'] != null) {
+          message = decoded['message'].toString();
+        } else if (decoded['error'] != null) {
+          message = decoded['error'].toString();
+        }
       }
-      throw Exception('Server Error: ${response.statusCode}');
-    } catch (_) {
-      throw Exception('Network Error: ${response.statusCode} - ${response.body}');
+    } catch (_) {}
+
+    if (message != null && message.isNotEmpty) {
+      throw Exception(message);
     }
+    throw Exception('Server Error: ${response.statusCode}');
   }
 
   Future<dynamic> get(String endpoint) async {

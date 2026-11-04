@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const ALLOWED_SELF_ROLES = ['Buyer', 'Student', 'Teacher', 'Worker', 'Employer', 'Seller', 'Delivery'];
+
 /**
  * @swagger
  * /api/auth/register:
@@ -33,9 +35,13 @@ router.post('/register', async (req, res) => {
             hashedRecoveryPin = await bcrypt.hash(recoveryPin, salt);
         }
 
-        // Base roles: everyone is a Buyer by default. They also get the role they explicitly applied for.
+        // Base roles: everyone is a Buyer by default.
+        // Protected: Admin/Super Admin can never be registered through the public endpoint.
         const activeRoles = ['Buyer'];
         if (userType && userType !== 'Buyer') {
+            if (!ALLOWED_SELF_ROLES.includes(userType) || userType === 'Admin') {
+                return res.status(400).json({ msg: 'Cannot register with role: ' + userType });
+            }
             activeRoles.push(userType);
         }
 
@@ -80,7 +86,7 @@ router.post('/login', async (req, res) => {
         }
 
         const payload = { user: { id: user._id, roles: user.roles, userType: user.userType } };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '10h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'super_secret_nisk_key_2026', { expiresIn: '10h' });
 
         res.json({ token, user: { id: user._id, name: user.name, roles: user.roles, userType: user.userType, profilePic: user.profilePic } });
     } catch (err) {
@@ -94,6 +100,9 @@ const auth = require('../middleware/auth');
 router.post('/add-role', auth, async (req, res) => {
     try {
         const { role } = req.body;
+        if (!role || !ALLOWED_SELF_ROLES.includes(role) || role === 'Admin') {
+            return res.status(403).json({ msg: 'Cannot self-assign this role. Administrative approval is required.' });
+        }
         const user = await User.findById(req.user.id);
 
         if (!user) return res.status(404).json({ msg: 'User not found' });
@@ -106,7 +115,7 @@ router.post('/add-role', auth, async (req, res) => {
 
         // Generate a fresh JWT with the newly updated roles so the frontend gains instant access
         const payload = { user: { id: user._id, roles: user.roles, userType: user.userType } };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '10h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'super_secret_nisk_key_2026', { expiresIn: '10h' });
 
         res.json({ roles: user.roles, token });
     } catch (err) {

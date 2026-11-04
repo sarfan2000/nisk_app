@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
@@ -10,6 +8,7 @@ class AuthService {
   static String get baseUrl {
     return '${ApiService.baseUrl}/auth';
   }
+
   Future<User?> login(String phone, String password) async {
     try {
       final response = await http.post(
@@ -21,15 +20,12 @@ class AuthService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final String token = data['token'];
-        // Extract roles
         List<dynamic> roles = data['user']['roles'] ?? [];
         final prefs = await SharedPreferences.getInstance();
         
-        // Preserve activeRole if already set in SharedPreferences and still valid
         String? savedActiveRole = prefs.getString('activeRole');
         String activeRole = savedActiveRole ?? data['user']['userType'] ?? 'Buyer'; 
         
-        // Ensure the chosen role is actually in their roles array, otherwise fallback
         if (roles.isNotEmpty) {
            bool hasRegisteredRole = roles.any((r) => r['role'] == activeRole && r['status'] == 'Active');
            if (!hasRegisteredRole) {
@@ -43,12 +39,12 @@ class AuthService {
 
         // Persist token and roles securely
         await prefs.setString('x-auth-token', token);
-        await prefs.setString('userType', data['user']['userType'] ?? 'Buyer'); // Legacy support
+        await prefs.setString('userType', data['user']['userType'] ?? 'Buyer');
         await prefs.setString('roles', jsonEncode(roles));
         await prefs.setString('activeRole', activeRole);
         await prefs.setString('profilePic', data['user']['profilePic'] ?? '');
         await prefs.setString('userName', data['user']['name'] ?? 'User');
-
+        await prefs.setString('userId', data['user']['id'] ?? data['user']['_id'] ?? '');
 
         return User.fromJson(data['user'], token);
       } else {
@@ -65,6 +61,7 @@ class AuthService {
     await prefs.remove('userType');
     await prefs.remove('roles');
     await prefs.remove('activeRole');
+    await prefs.remove('userId');
   }
 
   Future<List<dynamic>> addRole(String roleName) async {

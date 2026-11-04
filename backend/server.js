@@ -1,5 +1,15 @@
+// Fix for Windows DNS ECONNREFUSED bug on Atlas SRV lookups (must be first — before any require)
+// Disabled in Docker to preserve container DNS
+if (process.platform === 'win32' && !process.env.IS_DOCKER) {
+    try {
+        require('dns').setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+    } catch (e) {
+        // Fallback silently
+    }
+}
+
 require('dotenv').config();
-require('dns').setServers(['8.8.8.8', '8.8.4.4']); // Fix for Windows DNS ECONNREFUSED Bug
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -9,12 +19,16 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-const path = require('path');
-app.use('/uploads', cors(), express.static(path.join(__dirname, 'uploads'), { setHeaders: (res) => { res.set('Access-Control-Allow-Origin', '*'); } }));
+
+// Serve local uploads statically
+app.use('/uploads', cors(), express.static(path.join(__dirname, 'uploads'), {
+    setHeaders: (res) => { res.set('Access-Control-Allow-Origin', '*'); }
+}));
 
 // Set Security HTTP headers
 app.use(helmet());
@@ -25,10 +39,10 @@ app.use(mongoSanitize());
 // Prevent XSS attacks
 app.use(xss());
 
-// Rate Limiting (Limit each IP to 100 requests per 15 minutes)
+// Rate Limiting (Limit each IP to 200 requests per 15 minutes)
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 mins
-    max: 100,
+    windowMs: 15 * 60 * 1000,
+    max: 200,
     message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 app.use('/api/', limiter);
@@ -48,6 +62,7 @@ const operationsRoutes = require('./routes/operations');
 const searchRoutes = require('./routes/search');
 const paymentRoutes = require('./routes/payment');
 const deliveryRoutes = require('./routes/delivery');
+const suggestionsRoutes = require('./routes/suggestions');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
@@ -63,9 +78,10 @@ app.use('/api/operations', operationsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/delivery', deliveryRoutes);
-app.use('/api/suggestions', require('./routes/suggestions'));
+app.use('/api/suggestions', suggestionsRoutes);
 
 // Swagger Documentation Schema
+const PORT = process.env.PORT || 5001;
 const swaggerOptions = {
     swaggerDefinition: {
         openapi: '3.0.0',
@@ -75,7 +91,7 @@ const swaggerOptions = {
             version: '1.0.0',
         },
         servers: [
-            { url: 'http://localhost:5001' }
+            { url: `http://localhost:${PORT}` }
         ],
     },
     apis: ['./routes/*.js'],
@@ -85,7 +101,11 @@ const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'Platform API is running' });
+    res.json({
+        status: 'Platform API is running',
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // App-level error handler to prevent HTML response
@@ -95,10 +115,9 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/nisk_app')
     .then(() => {
-        console.log('MongoDB connected');
+        console.log('MongoDB connected successfully');
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server running on port ${PORT}`);
         });

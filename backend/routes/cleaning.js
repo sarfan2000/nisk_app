@@ -21,7 +21,7 @@ router.post('/request', [auth, role(['Buyer', 'Employer'])], async (req, res) =>
 router.get('/requests', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
     try {
         const requests = await CleaningRequest.find()
-            .populate('Buyer', 'name phone')
+            .populate('customer', 'name phone')
             .populate('assignedTeam');
         res.json(requests);
     } catch (err) {

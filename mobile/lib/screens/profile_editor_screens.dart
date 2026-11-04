@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nisk_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -25,10 +24,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _loadCurrentData() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _name = prefs.getString('userName') ?? '';
-      _email = prefs.getString('userEmail') ?? '';
-    });
+    if (mounted) {
+      setState(() {
+        _name = prefs.getString('userName') ?? '';
+        _email = prefs.getString('userEmail') ?? '';
+      });
+    }
   }
 
   Future<void> _updateProfile() async {
@@ -44,18 +45,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'location': _location,
       });
 
-      if (mounted) {
-        // Save back to prefs so UI updates
-        final prefs = await SharedPreferences.getInstance();
-        if (response != null && response['user'] != null) {
-          prefs.setString('userName', response['user']['name'] ?? '');
-          prefs.setString('userEmail', response['user']['email'] ?? '');
-        }
-        
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green));
-        Navigator.pop(context);
+      final prefs = await SharedPreferences.getInstance();
+      if (response != null && response['user'] != null) {
+        prefs.setString('userName', response['user']['name'] ?? '');
+        prefs.setString('userEmail', response['user']['email'] ?? '');
       }
+      
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green));
+      Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -109,7 +108,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
-
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -330,4 +328,3 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 }
-

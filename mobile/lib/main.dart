@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:device_preview/device_preview.dart';
-// No presets import needed
 import 'package:nisk_app/screens/home_screen.dart';
 import 'package:nisk_app/screens/login_screen.dart';
 import 'package:nisk_app/screens/profile_screen.dart';
@@ -126,8 +125,7 @@ class _NiskAppState extends State<NiskApp> {
             ),
             useMaterial3: true,
           ),
-          useInheritedMediaQuery: true,
-          locale: context.locale, // Overridden if DevicePreview wants to inject? We merge them manually for prod: context.locale
+          locale: context.locale,
           supportedLocales: context.supportedLocales,
           localizationsDelegates: context.localizationDelegates,
           builder: DevicePreview.appBuilder,
@@ -144,4 +142,3 @@ class _NiskAppState extends State<NiskApp> {
     );
   }
 }
-

@@ -117,7 +117,7 @@ router.get('/checkout/:orderId', async (req, res) => {
     }
 });
 
-// 2. Webhook (Payhere calls this in background)
+// 2. Webhook (Payhere calls this in background with cryptographic signature)
 router.post('/webhook', async (req, res) => {
     const { merchant_id, order_id, payhere_amount, payhere_currency, status_code, md5sig } = req.body;
 
@@ -208,56 +208,51 @@ router.post('/webhook', async (req, res) => {
 
 // 3. Return Pages
 router.get('/success', async (req, res) => {
-    // DEV FALLBACK: PayHere cannot send webhooks to localhost. 
-    // This forcibly updates the database when testing locally.
     let order_id = req.query.order_id;
-    if (Array.isArray(order_id)) order_id = order_id[0]; // Fix for duplicate query params
+    if (Array.isArray(order_id)) order_id = order_id[0];
 
-    if (order_id) {
-        if (order_id.startsWith('BK')) {
-            const booking = await Booking.findOneAndUpdate({ bookingId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
-            if (booking && booking.items) {
-                for (let item of booking.items) {
-                    if (item.teacher) {
-                        const Notification = require('../models/Notification');
-                        await new Notification({
-                            user: item.teacher,
-                            title: 'Student Payment Confirmed!',
-                            message: `Student paid successfully and booked your class. Subject: ${item.subject || 'Unknown'}, Grade: ${booking.grade || 'Unknown'}, Time: ${item.schedule || 'Pending'}. Please approve.`,
-                            type: 'Alert'
-                        }).save();
-                    }
-                }
-            }
-        } else if (order_id.startsWith('PR')) {
-            const existingOrder = await ProductOrder.findOne({ orderId: order_id });
-            if (existingOrder && existingOrder.paymentStatus !== 'Paid') {
-                const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
-                if (pOrder) {
-                    const Product = require('../models/Product');
-                    const productObj = await Product.findById(pOrder.product);
-                    if (productObj) {
-                        const Notification = require('../models/Notification');
-                        const notifySeller = new Notification({
-                            user: productObj.seller,
-                            title: 'New Product Sale!',
-                            message: `A buyer successfully paid for ${pOrder.quantity}x '${productObj.name}'. Order: ${order_id}`,
-                            type: 'Reminder'
-                        });
-                        await notifySeller.save();
-                    }
-                }
-            }
-        } else if (order_id.startsWith('MP')) {
-            const mBooking = await ManpowerBooking.findOneAndUpdate({ orderId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
-            if (mBooking) {
-                const Notification = require('../models/Notification');
-                await new Notification({ user: mBooking.worker, title: 'Employer Payment Confirmed!', message: 'The employer has paid securely for your booking.', type: 'Alert' }).save();
+    // Local dev testing ONLY: strictly gated, never allowed in production
+    if (process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_PAYMENT_BYPASS === 'true') {
+        if (order_id) {
+            console.warn(`[DEV WARNING] Executing dev payment bypass for ${order_id}`);
+            if (order_id.startsWith('BK')) {
+                await Booking.findOneAndUpdate({ bookingId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
+            } else if (order_id.startsWith('PR')) {
+                await ProductOrder.findOneAndUpdate({ orderId: order_id, paymentStatus: { $ne: 'Paid' } }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+            } else if (order_id.startsWith('MP')) {
+                await ManpowerBooking.findOneAndUpdate({ orderId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
             }
         }
     }
-    res.send('<h2>Payment Successful! You can close this tab and return to the app.</h2>');
+
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Payment Status</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 40px 20px; background: #f9f9f9; }
+            .card { background: white; max-width: 420px; margin: 40px auto; padding: 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+            .icon { font-size: 48px; color: #27ae60; margin-bottom: 16px; }
+            h2 { color: #1B3B6F; margin-bottom: 12px; }
+            p { color: #555; line-height: 1.5; font-size: 15px; }
+            .order-id { font-weight: bold; color: #333; background: #f0f3f8; padding: 6px 12px; border-radius: 6px; display: inline-block; margin: 12px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">✓</div>
+            <h2>Payment Processing</h2>
+            ${order_id ? `<div class="order-id">Order ID: ${order_id}</div>` : ''}
+            <p>Your payment has been received and is being verified by our secure gateway.</p>
+            <p>You can now safely return to the NISK application.</p>
+        </div>
+    </body>
+    </html>
+    `);
 });
-router.get('/cancel', (req, res) => res.send('<h2>Payment Cancelled. You can close this tab.</h2>'));
+
+router.get('/cancel', (req, res) => res.send('<h2>Payment Cancelled. You can close this tab and return to the app.</h2>'));
 
 module.exports = router;

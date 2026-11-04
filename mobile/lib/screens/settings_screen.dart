@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/auth_service.dart';
-
 import 'package:nisk_app/screens/profile_editor_screens.dart';
 import 'package:nisk_app/main.dart';
 import 'package:nisk_app/screens/suggestions_screen.dart';
@@ -17,7 +15,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _darkThemeEnabled = false;
-  bool _biometricEnabled = false;
   String _language = 'English';
 
   @override
@@ -28,29 +25,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _darkThemeEnabled = prefs.getBool('isDarkMode') ?? false;
-      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _language = prefs.getString('language') ?? 'English';
-    });
+    if (mounted) {
+      setState(() {
+        _darkThemeEnabled = prefs.getBool('isDarkMode') ?? false;
+        _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+        _language = prefs.getString('language') ?? 'English';
+      });
+    }
   }
 
   Future<void> _toggleDarkMode(bool val) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isDarkMode', val);
-    setState(() {
-      _darkThemeEnabled = val;
-    });
+    if (mounted) {
+      setState(() {
+        _darkThemeEnabled = val;
+      });
+    }
     globalThemeMode.value = val ? ThemeMode.dark : ThemeMode.light;
   }
 
   Future<void> _changeLanguage(String lang) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', lang);
-    setState(() {
-      _language = lang;
-    });
+    if (mounted) {
+      setState(() {
+        _language = lang;
+      });
+    }
 
+    if (!mounted) return;
     if (lang == 'Sinhala (සිංහල)') {
       await context.setLocale(const Locale('si'));
     } else if (lang == 'Tamil (தமிழ்)') {
@@ -60,7 +64,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     if (mounted) Navigator.pop(context);
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Language updated to $lang')));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Language updated to $lang')));
+    }
   }
 
   @override
@@ -98,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (val) async {
                final prefs = await SharedPreferences.getInstance();
                await prefs.setBool('notifications_enabled', val);
-               setState(() => _notificationsEnabled = val);
+               if (mounted) setState(() => _notificationsEnabled = val);
             },
           ),
           Padding(
@@ -146,8 +152,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.only(bottom: 8.0, left: 4),
       child: Text(
         title.toUpperCase(),
-        style: TextStyle(
-          color: const Color(0xFF1B3B6F),
+        style: const TextStyle(
+          color: Color(0xFF1B3B6F),
           fontWeight: FontWeight.bold,
           fontSize: 13,
           letterSpacing: 1.2,
@@ -164,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
+          decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), shape: BoxShape.circle),
           child: Icon(icon, color: Colors.blue.shade700),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -183,14 +189,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: SwitchListTile(
         secondary: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle),
+          decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), shape: BoxShape.circle),
           child: Icon(icon, color: Colors.purple.shade700),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
         value: value,
         onChanged: onChanged,
-        activeColor: Colors.green,
+        activeTrackColor: Colors.green,
       ),
     );
   }
@@ -219,11 +225,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildLangOption(String lang) {
+  Widget _buildLangOption(String langName) {
+    bool isSelected = _language == langName;
     return ListTile(
-      title: Text(lang, style: TextStyle(fontWeight: _language == lang ? FontWeight.bold : FontWeight.normal)),
-      trailing: _language == lang ? const Icon(Icons.check, color: Colors.green) : null,
-      onTap: () => _changeLanguage(lang),
+      title: Text(langName, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+      trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+      onTap: () => _changeLanguage(langName),
     );
   }
 }

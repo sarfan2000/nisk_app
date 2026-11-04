@@ -3,12 +3,13 @@ const router = express.Router();
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Job = require('../models/Job');
+const TeacherProfile = require('../models/TeacherProfile');
 
 // Global Search API
 router.get('/', async (req, res) => {
     try {
-        const { query, category, location } = req.query;
-        let searchString = query ? { $regex: query, $options: 'i' } : null;
+        const { query } = req.query;
+        let searchString = query && query.trim() ? { $regex: query.trim(), $options: 'i' } : null;
 
         let results = {
             teachers: [],
@@ -18,29 +19,57 @@ router.get('/', async (req, res) => {
         };
 
         if (searchString) {
-            // Find Teachers
-            const TeacherProfile = require('../models/TeacherProfile');
-            // search by subject/name in teacher profile if possible, but let's query Users first
+            // Find Teachers (by name, city, district, or profile subjects)
+            const matchedTeacherProfiles = await TeacherProfile.find({
+                $or: [
+                    { subjects: searchString },
+                    { location: searchString },
+                    { experience: searchString }
+                ]
+            }).select('user');
+
+            const profileUserIds = matchedTeacherProfiles.map(p => p.user);
+
             results.teachers = await User.find({
-                $or: [{ name: searchString }, { location: searchString }, { userType: searchString }],
-                'roles.role': 'Teacher'
-            }).select('name location userType');
+                $and: [
+                    { 'roles.role': 'Teacher' },
+                    {
+                        $or: [
+                            { name: searchString },
+                            { 'location.city': searchString },
+                            { 'location.district': searchString },
+                            { 'location.province': searchString },
+                            { _id: { $in: profileUserIds } }
+                        ]
+                    }
+                ]
+            }).select('name location userType roles isVerified');
 
             // Find Jobs
             results.jobs = await Job.find({
-                $or: [{ title: searchString }, { category: searchString }, { company: searchString }],
+                $or: [
+                    { title: searchString },
+                    { category: searchString },
+                    { company: searchString },
+                    { 'location.city': searchString },
+                    { 'location.district': searchString }
+                ],
                 isActive: true
-            }).select('title company location salary category');
+            }).select('title company location salary category jobType');
 
             // Find Products
             results.products = await Product.find({
-                $or: [{ name: searchString }, { category: searchString }],
-                // isApproved check removed so user can immediately search what they posted!
-            }).select('name price stock category');
+                $or: [
+                    { name: searchString },
+                    { category: searchString },
+                    { description: searchString }
+                ]
+            }).select('name price stock category images seller');
         }
 
         res.json(results);
     } catch (err) {
+        console.error('Search error:', err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
