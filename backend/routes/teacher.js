@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const TeacherProfile = require('../models/TeacherProfile');
 const Booking = require('../models/Booking');
@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
             if (req.query.location) filter.location = new RegExp(req.query.location, 'i');
         }
 
-        const profiles = await TeacherProfile.find(filter).populate('user', 'name phone location isVerified status');
+        const profiles = await TeacherProfile.find(filter).populate('user', 'name phone location isVerified status profilePic');
         res.json(profiles);
     } catch (err) {
         console.error(err);
@@ -140,6 +140,10 @@ router.post('/profile/:userId', [require('../middleware/auth'), upload.array('im
             console.warn('JSON parse warning on profile fields:', parseErr);
         }
 
+        if (req.body.profilePicture) {
+            await require('../models/User').findByIdAndUpdate(userIdToUse, { profilePic: req.body.profilePicture }).catch(e => console.error('User profilePic sync error:', e));
+        }
+
         if (profile) {
             profile = await TeacherProfile.findOneAndUpdate(
                 { user: userIdToUse },
@@ -195,7 +199,12 @@ router.get('/bookings/me', [require('../middleware/auth'), require('../middlewar
 router.patch('/booking/:bookingId/status', [require('../middleware/auth'), require('../middleware/role')(['Teacher'])], async (req, res) => {
     try {
         const { status } = req.body;
-        const booking = await Booking.findOneAndUpdate({ _id: req.params.bookingId, 'items.teacher': req.user.id }, { status }, { new: true }).populate('student', 'name');
+                const param = req.params.bookingId;
+        const isObjectId = /^[a-f\d]{24}$/i.test(param);
+        const query = isObjectId
+            ? { _id: param, 'items.teacher': req.user.id }
+            : { bookingId: param, 'items.teacher': req.user.id };
+        const booking = await Booking.findOneAndUpdate(query, { status }, { new: true }).populate('student', 'name');
 
         if (booking && booking.student) {
             let message = `Your booking has been ${status} by the teacher.`;

@@ -141,20 +141,40 @@ class ProductCard extends StatelessWidget {
             Expanded(
               child: Hero(
                 tag: 'product_image_${product['_id']}',
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    image: imageUrl != null 
-                        ? DecorationImage(
-                            image: NetworkImage(imageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: imageUrl == null 
-                      ? const Icon(Icons.image, size: 50, color: Colors.green)
-                      : null,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: imageUrl != null && imageUrl!.isNotEmpty
+                      ? Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: Colors.green.withOpacity(0.08),
+                            child: const Center(
+                              child: Icon(Icons.shopping_bag_outlined, size: 48, color: Colors.green),
+                            ),
+                          ),
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              color: Colors.grey.shade100,
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green),
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: Colors.green.withOpacity(0.08),
+                          child: const Center(
+                            child: Icon(Icons.shopping_bag_outlined, size: 48, color: Colors.green),
+                          ),
+                        ),
                 ),
               ),
             ),

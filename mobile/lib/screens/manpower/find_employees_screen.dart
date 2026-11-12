@@ -171,9 +171,21 @@ class _FindEmployeesScreenState extends State<FindEmployeesScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     color: Colors.grey.shade200,
-                    image: imageUrl != null ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover) : null,
                   ),
-                  child: imageUrl == null ? const Icon(Icons.work, color: Colors.grey) : null,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: imageUrl != null && imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: 70,
+                            height: 70,
+                            errorBuilder: (context, error, stackTrace) => const Center(
+                              child: Icon(Icons.work, color: Colors.grey),
+                            ),
+                          )
+                        : const Center(child: Icon(Icons.work, color: Colors.grey)),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),

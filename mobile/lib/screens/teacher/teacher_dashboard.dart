@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../education/live_class_screen.dart';
 
@@ -145,7 +145,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 radius: 30, 
                 backgroundColor: Colors.redAccent, 
                 backgroundImage: _getImageUrl(_profilePic) != null ? NetworkImage(_getImageUrl(_profilePic)!) : null,
-                child: _getImageUrl(_profilePic) == null ? const Icon(Icons.person, color: Colors.white) : null,
+                onBackgroundImageError: _getImageUrl(_profilePic) != null ? (e, s) {} : null,
+                child: const Icon(Icons.person, color: Colors.white),
               ),
               title: Text('Welcome, $_userName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               subtitle: const Text('Manage your schedule.'),
@@ -182,7 +183,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         itemBuilder: (context, index) {
                           final b = _bookings[index];
                           final studentName = b['student'] != null ? b['student']['name'] : 'Unknown Student';
-                          final grade = b['grade'] ?? 'N/A';
+                          final grade = b['grade'] != null ? (b['grade'] is Map ? (b['grade']['name'] ?? b['grade']['gradeName'] ?? 'N/A') : b['grade']) : 'N/A';
                           final status = b['status'] ?? 'Pending';
                           final String title = b['bookingId'] ?? 'BK-Unknown';
                           final String details = 'Student: $studentName ($grade)';
@@ -211,7 +212,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildBookingCard(String title, String details, String status, String? startTime, String? meetingRoomId) {
+  Widget _buildBookingCard(String title, String details, String status, String? startTime, String? meetingRoomId, {String studentSchedule = ''}) {
     bool isActionable = (status == 'Pending' || status == 'Admin_Approved');
     String displayStatus = status == 'Admin_Approved' ? 'Paid - Action Required' : status;
     String buttonText = isActionable ? 'Accept Class' : (startTime == null ? 'Schedule Class' : 'Complete Class');
@@ -228,6 +229,16 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
              crossAxisAlignment: CrossAxisAlignment.start,
              children: [
                Text(details, style: const TextStyle(fontWeight: FontWeight.w500)),
+               if (studentSchedule.isNotEmpty) ...[
+                 const SizedBox(height: 4),
+                 Row(
+                   children: [
+                     const Icon(Icons.access_time_filled, size: 14, color: Colors.deepOrangeAccent),
+                     const SizedBox(width: 4),
+                     Text('Booked Time: $studentSchedule', style: const TextStyle(color: Colors.deepOrangeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                   ],
+                 ),
+               ],
                if (startTime != null) ...[
                  const SizedBox(height: 4),
                  Text('Scheduled: ${DateTime.parse(startTime).toLocal().toString().substring(0, 16)}', style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),

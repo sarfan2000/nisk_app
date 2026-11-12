@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nisk_app/screens/profile_editor_screens.dart';
 import 'package:nisk_app/main.dart';
@@ -55,9 +55,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     if (!mounted) return;
-    if (lang == 'Sinhala (සිංහල)') {
+    if (lang == 'Sinhala (à·ƒà·’à¶‚à·„à¶½)') {
       await context.setLocale(const Locale('si'));
-    } else if (lang == 'Tamil (தமிழ்)') {
+    } else if (lang == 'Tamil (à®¤à®®à®¿à®´à¯)') {
       await context.setLocale(const Locale('ta'));
     } else {
       await context.setLocale(const Locale('en'));
@@ -107,19 +107,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                if (mounted) setState(() => _notificationsEnabled = val);
             },
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+          Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
             child: ListTile(
-              leading: const Icon(Icons.language, color: Colors.blueGrey),
-              title: const Text('Language', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(_language),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), shape: BoxShape.circle),
+                child: Icon(Icons.language, color: Colors.blue.shade700),
+              ),
+              title: const Text('Language', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(_language, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
               onTap: () {
                 _showLanguagePicker();
               },
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              tileColor: isDark ? Colors.grey.shade800 : Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             ),
           ),
           _buildSwitchTile(
@@ -215,8 +218,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text('Select Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               _buildLangOption('English'),
-              _buildLangOption('Sinhala (සිංහල)'),
-              _buildLangOption('Tamil (தமிழ்)'),
+              _buildLangOption('Sinhala (à·ƒà·’à¶‚à·„à¶½)'),
+              _buildLangOption('Tamil (à®¤à®®à®¿à®´à¯)'),
               const SizedBox(height: 16),
             ],
           ),

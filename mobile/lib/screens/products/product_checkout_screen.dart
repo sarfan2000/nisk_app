@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:nisk_app/services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nisk_app/screens/home_screen.dart';
 
 class ProductCheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -113,13 +114,27 @@ class _ProductCheckoutScreenState extends State<ProductCheckoutScreen> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
-                    image: widget.imageUrl != null 
-                        ? DecorationImage(image: NetworkImage(widget.imageUrl!), fit: BoxFit.cover)
-                        : null,
                   ),
-                  child: widget.imageUrl == null ? const Icon(Icons.image, color: Colors.grey) : null,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                        ? Image.network(
+                            widget.imageUrl!,
+                            fit: BoxFit.cover,
+                            width: 60,
+                            height: 60,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.green.withOpacity(0.1),
+                              child: const Icon(Icons.shopping_bag_outlined, color: Colors.green, size: 28),
+                            ),
+                          )
+                        : Container(
+                            color: Colors.green.withOpacity(0.1),
+                            child: const Icon(Icons.shopping_bag_outlined, color: Colors.green, size: 28),
+                          ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -247,6 +262,13 @@ class _ProductCheckoutScreenState extends State<ProductCheckoutScreen> {
          
          if (await canLaunchUrl(url)) {
            await launchUrl(url, mode: LaunchMode.inAppWebView);
+           // After webview closes go to Home
+           if (context.mounted) {
+             Navigator.of(context).pushAndRemoveUntil(
+               MaterialPageRoute(builder: (_) => const HomeScreen()),
+               (route) => false,
+             );
+           }
          } else {
            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch payment portal')));
          }

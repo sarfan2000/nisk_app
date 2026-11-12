@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/find_tutor_screen.dart';
 import 'package:nisk_app/screens/education/teacher_application_screen.dart';
 import 'package:nisk_app/screens/education/my_bookings_screen.dart';
@@ -66,7 +66,7 @@ class _EducationDashboardState extends State<EducationDashboard> {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const TeacherDashboard()));
               }),
               _buildOptionCard(context, 'My Student Bookings', Icons.event_available, () {
-                 Navigator.push(context, MaterialPageRoute(builder: (context) => const MyBookingsScreen())); // Ensure this screen handles teacher queries
+                 Navigator.push(context, MaterialPageRoute(builder: (context) => const MyBookingsScreen(isTeacherView: true)));
               }),
               _buildOptionCard(context, 'Teach with Us (Application)', Icons.school, () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const TeacherApplicationScreen()));

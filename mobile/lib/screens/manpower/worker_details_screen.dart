@@ -118,10 +118,22 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        image: widget.imageUrl != null ? DecorationImage(image: NetworkImage(widget.imageUrl!), fit: BoxFit.cover) : null,
                         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]
                       ),
-                      child: widget.imageUrl == null ? const Icon(Icons.person, size: 60, color: Colors.grey) : null,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                            ? Image.network(
+                                widget.imageUrl!,
+                                fit: BoxFit.cover,
+                                width: 120,
+                                height: 120,
+                                errorBuilder: (context, error, stackTrace) => const Center(
+                                  child: Icon(Icons.person, size: 60, color: Colors.grey),
+                                ),
+                              )
+                            : const Center(child: Icon(Icons.person, size: 60, color: Colors.grey)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

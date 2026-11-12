@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
@@ -102,9 +102,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundImage: _getImageUrl(_profilePic) != null
                               ? NetworkImage(_getImageUrl(_profilePic)!)
                               : null,
-                          child: _getImageUrl(_profilePic) == null
-                              ? const Icon(Icons.person, size: 60, color: Color(0xFF1B3B6F))
-                              : null,
+                          onBackgroundImageError: _getImageUrl(_profilePic) != null ? (e, s) {} : null,
+                          child: const Icon(Icons.person, size: 60, color: Color(0xFF1B3B6F)),
                         ),
                         if (_isUploading)
                           const Positioned.fill(child: CircularProgressIndicator(color: Colors.white)),
@@ -144,9 +143,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildProfileOption(context, Icons.security, 'Privacy & Security', () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivacySecurityScreen()));
             }),
-            _buildProfileOption(context, Icons.help_outline, 'Help & Support', () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpSupportScreen()));
-            }),
             const Divider(height: 40),
             ListTile(
               leading: Container(
@@ -156,13 +152,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               title: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.red),
-              onTap: () async {
-                await AuthService().logout();
-                if (mounted) {
-                   Navigator.of(context, rootNavigator: true).pushReplacementNamed('/login');
-                }
-              },
-            ),
+              onTap: () {
+                final navigator = Navigator.of(context, rootNavigator: true);
+                AuthService().logout().then((_) {
+                  navigator.pushReplacementNamed('/login');
+                });
+              },            ),
           ],
         ),
       ),

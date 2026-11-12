@@ -3,7 +3,8 @@ import '../../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../education/live_class_screen.dart';
 class MyBookingsScreen extends StatefulWidget {
-  const MyBookingsScreen({super.key});
+  final bool isTeacherView;
+  const MyBookingsScreen({super.key, this.isTeacherView = false});
 
   @override
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
@@ -24,11 +25,20 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   Future<void> _fetchBookings() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
-    _userType = prefs.getString('userType') ?? 'Student';
+    final storedActiveRole = prefs.getString('activeRole');
+    final storedUserType = prefs.getString('userType');
+
+    if (widget.isTeacherView) {
+      _userType = 'Teacher';
+    } else if (storedActiveRole != null && storedActiveRole.isNotEmpty) {
+      _userType = storedActiveRole;
+    } else {
+      _userType = storedUserType ?? 'Student';
+    }
 
     try {
       String endpoint = '/education/my-bookings'; // Default for Student
-      if (_userType == 'Teacher') {
+      if (widget.isTeacherView || _userType == 'Teacher') {
         endpoint = '/teacher/bookings/me';
       } else if (_userType == 'Admin') {
         endpoint = '/admin/bookings/pending';
@@ -53,6 +63,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     switch (status.toLowerCase()) {
       case 'teacher_approved':
       case 'completed':
+      case 'compeleted':
       case 'accepted':
         return Colors.green;
       case 'admin_approved':
@@ -79,7 +90,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       final body = {'status': newStatus};
       final response = await _apiService.patch(endpoint, body);
       if (response != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status updated successfully!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Status updated successfully!')));
         _fetchBookings(); // Refresh the list
       }
     } catch (e) {
@@ -93,7 +104,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('My Class Bookings', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.redAccent,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -122,13 +133,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                   itemBuilder: (context, index) {
                     final booking = _bookings[index];
                     final dateString = booking['createdAt'] ?? '';
-                    final DateTime parsedDate = dateString.isNotEmpty ? DateTime.tryParse(dateString) ?? DateTime.now() : DateTime.now();
+                    final DateTime parsedDate = dateString.isNotEmpty ? (DateTime.tryParse(dateString)?.toLocal() ?? DateTime.now()) : DateTime.now();
                     final formattedDate = "${parsedDate.year}-${parsedDate.month.toString().padLeft(2, '0')}-${parsedDate.day.toString().padLeft(2, '0')} at ${parsedDate.hour.toString().padLeft(2, '0')}:${parsedDate.minute.toString().padLeft(2, '0')}";
                     
                     final String paymentStatus = booking['paymentStatus'] ?? 'Pending';
                     final String bookingStatus = booking['status'] ?? 'Pending';
                     final double total = (booking['totalBill'] ?? 0).toDouble();
                     final List items = booking['items'] ?? [];
+                    final String classSchedule = items.isNotEmpty && items[0]['schedule'] != null ? items[0]['schedule'].toString() : '';
                     final String subject = items.isNotEmpty ? items[0]['subject']?.toString() ?? 'N/A' : 'Unknown Class';
                     final String teacherName = (items.isNotEmpty && items[0]['teacher'] != null && items[0]['teacher'] is Map) 
                          ? items[0]['teacher']['name'] ?? 'Assigned Teacher' 
@@ -155,7 +167,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               children: [
                                 Text(
                                   booking['bookingId'] ?? 'Unknown ID',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 16),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 16),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -164,7 +176,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    paymentStatus == 'Completed' ? 'PAID' : paymentStatus.toUpperCase(),
+                                    paymentStatus == 'Completed' ? 'PAID' : (paymentStatus == 'Compeleted' ? 'PAID' : paymentStatus.toUpperCase()),
                                     style: TextStyle(color: _getStatusColor(paymentStatus), fontWeight: FontWeight.bold, fontSize: 12),
                                   ),
                                 )
@@ -178,12 +190,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                 Expanded(child: Text('$displayPersonLabel: $displayPersonName', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                               ],
                             ),
+                            if (classSchedule.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.access_time_filled, color: Colors.deepOrangeAccent, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text('Class Time: $classSchedule', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.deepOrangeAccent)),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Row(
                               children: [
                                 const Icon(Icons.menu_book, color: Colors.grey, size: 20),
                                 const SizedBox(width: 8),
-                                Text('$subject (${booking['grade'] != null ? (booking['grade'] is Map ? booking['grade']['name'] ?? booking['grade']['gradeName'] ?? 'Unknown' : booking['grade']) : 'Unknown'})', style: const TextStyle(fontSize: 15)),
+                                Expanded(child: Text('$subject (${booking['grade'] != null ? (booking['grade'] is Map ? booking['grade']['name'] ?? booking['grade']['gradeName'] ?? 'Unknown' : booking['grade']) : 'Unknown'})', style: const TextStyle(fontSize: 15))),
                               ],
                             ),
                             const SizedBox(height: 16),
@@ -259,7 +281,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                const SizedBox(height: 12),
                                ElevatedButton(
                                  onPressed: () => _updateStatus(booking['_id'], 'Admin_Approved'),
-                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, minimumSize: const Size.fromHeight(40)),
+                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, minimumSize: const Size.fromHeight(40)),
                                  child: const Text('Verify & Approve Payment', style: TextStyle(color: Colors.white)),
                                ),
                             ],

@@ -25,7 +25,51 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve local uploads statically
+// Serve uploads statically from disk or retrieve from MongoDB permanent storage
+const UploadedFile = require('./models/UploadedFile');
+const fs = require('fs');
+
+app.get('/uploads/:filename', cors(), async (req, res) => {
+    try {
+        const filename = path.basename(req.params.filename);
+        const localPath = path.join(__dirname, 'uploads', filename);
+
+        if (fs.existsSync(localPath)) {
+            return res.sendFile(localPath);
+        }
+
+        const fileDoc = await UploadedFile.findOne({ filename });
+        if (fileDoc && fileDoc.data) {
+            try {
+                const uploadsDir = path.join(__dirname, 'uploads');
+                if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                fs.writeFileSync(localPath, fileDoc.data);
+            } catch (err) {
+                console.error('Failed to cache file to disk:', err.message);
+            }
+            res.set('Content-Type', fileDoc.contentType || 'image/jpeg');
+            res.set('Access-Control-Allow-Origin', '*');
+            res.set('Cache-Control', 'public, max-age=86400');
+            return res.send(fileDoc.data);
+        }
+    } catch (err) {
+        console.error('Error fetching file from MongoDB:', err.message);
+    }
+
+    // Fallback: If file not found on disk or MongoDB, send a clean placeholder SVG with status 200 (never 404)
+    const placeholderSvg = Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+            <rect width="100%" height="100%" fill="#E8F5E9"/>
+            <circle cx="150" cy="140" r="60" fill="#C8E6C9"/>
+            <path d="M125 140 L145 160 L180 125" stroke="#2E7D32" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <text x="150" y="240" font-family="sans-serif" font-size="16" font-weight="bold" fill="#2E7D32" text-anchor="middle">NISK</text>
+        </svg>`
+    );
+    res.set('Content-Type', 'image/svg+xml');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.status(200).send(placeholderSvg);
+});
+
 app.use('/uploads', cors(), express.static(path.join(__dirname, 'uploads'), {
     setHeaders: (res) => { res.set('Access-Control-Allow-Origin', '*'); }
 }));

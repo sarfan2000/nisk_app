@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -137,11 +137,11 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
         if (mounted) setState(() => _isScreenSharing = false);
       } else {
         await _engine!.startScreenCapture(const ScreenCaptureParameters2(captureAudio: true, captureVideo: true));
-        await _engine!.updateChannelMediaOptions(ChannelMediaOptions(
+        await _engine!.updateChannelMediaOptions(const ChannelMediaOptions(
           publishCameraTrack: false,
-          publishScreenTrack: kIsWeb ? true : false,
-          publishScreenCaptureVideo: kIsWeb ? false : true,
-          publishScreenCaptureAudio: kIsWeb ? false : true,
+          publishScreenTrack: true,
+          publishScreenCaptureVideo: true,
+          publishScreenCaptureAudio: true,
         ));
         if (mounted) setState(() => _isScreenSharing = true);
       }
@@ -178,7 +178,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
                             canvas: VideoCanvas(
                               uid: 0, 
                               sourceType: _isScreenSharing ? VideoSourceType.videoSourceScreen : VideoSourceType.videoSourceCamera,
-                              renderMode: RenderModeType.renderModeHidden,
+                              renderMode: RenderModeType.renderModeFit,
                             ),
                             useFlutterTexture: kIsWeb ? false : true,
                           ),
@@ -200,7 +200,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
           rtcEngine: _engine!,
           canvas: VideoCanvas(
             uid: _remoteUid,
-            renderMode: RenderModeType.renderModeHidden,
+            renderMode: RenderModeType.renderModeFit,
           ),
           connection: RtcConnection(channelId: widget.channelName),
           useFlutterTexture: kIsWeb ? false : true,

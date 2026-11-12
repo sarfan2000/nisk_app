@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const Booking = require('../models/Booking');
@@ -159,6 +159,8 @@ router.post('/webhook', async (req, res) => {
                     const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
                     if (pOrder) {
                         const Product = require('../models/Product');
+                        // Deduct stock only when payment is confirmed!
+                        await Product.findByIdAndUpdate(pOrder.product, { $inc: { stock: -pOrder.quantity } });
                         const productObj = await Product.findById(pOrder.product);
                         if (productObj) {
                             const notifySeller = new Notification({
@@ -216,9 +218,39 @@ router.get('/success', async (req, res) => {
         if (order_id) {
             console.warn(`[DEV WARNING] Executing dev payment bypass for ${order_id}`);
             if (order_id.startsWith('BK')) {
-                await Booking.findOneAndUpdate({ bookingId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
+                const booking = await Booking.findOneAndUpdate({ bookingId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
+                if (booking) {
+                    const notify = new Notification({
+                        user: booking.student,
+                        title: 'Payment Successful',
+                        message: `Your payment for booking ${order_id} has been processed successfully.`,
+                        type: 'Alert'
+                    });
+                    await notify.save();
+
+                    if (booking.items && booking.items.length > 0) {
+                        for (let item of booking.items) {
+                            if (item.teacher) {
+                                const notifyTeacher = new Notification({
+                                    user: item.teacher,
+                                    title: 'Student Payment Confirmed!',
+                                    message: `Student paid successfully and booked your class. Subject: ${item.subject || 'Unknown'}, Grade: ${booking.grade || 'Unknown'}, Time: ${item.schedule || 'Pending'}. Please approve.`,
+                                    type: 'Alert'
+                                });
+                                await notifyTeacher.save();
+                            }
+                        }
+                    }
+                }
             } else if (order_id.startsWith('PR')) {
-                await ProductOrder.findOneAndUpdate({ orderId: order_id, paymentStatus: { $ne: 'Paid' } }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+                const existingOrder = await ProductOrder.findOne({ orderId: order_id });
+                if (existingOrder && existingOrder.paymentStatus !== 'Paid') {
+                    const pOrder = await ProductOrder.findOneAndUpdate({ orderId: order_id }, { paymentStatus: 'Paid', orderStatus: 'Payment Confirmed' }, { new: true });
+                    if (pOrder) {
+                        const Product = require('../models/Product');
+                        await Product.findByIdAndUpdate(pOrder.product, { $inc: { stock: -pOrder.quantity } });
+                    }
+                }
             } else if (order_id.startsWith('MP')) {
                 await ManpowerBooking.findOneAndUpdate({ orderId: order_id, paymentStatus: { $ne: 'Completed' } }, { paymentStatus: 'Completed', status: 'Admin_Approved' }, { new: true });
             }
@@ -242,7 +274,7 @@ router.get('/success', async (req, res) => {
     </head>
     <body>
         <div class="card">
-            <div class="icon">✓</div>
+            <div class="icon">âœ“</div>
             <h2>Payment Processing</h2>
             ${order_id ? `<div class="order-id">Order ID: ${order_id}</div>` : ''}
             <p>Your payment has been received and is being verified by our secure gateway.</p>
@@ -253,6 +285,42 @@ router.get('/success', async (req, res) => {
     `);
 });
 
-router.get('/cancel', (req, res) => res.send('<h2>Payment Cancelled. You can close this tab and return to the app.</h2>'));
+router.get('/cancel', async (req, res) => {
+    let order_id = req.query.order_id;
+    if (Array.isArray(order_id)) order_id = order_id[0];
+
+    // If a product order was cancelled, ensure order is marked or handled
+    if (order_id && order_id.startsWith('PR')) {
+        await ProductOrder.findOneAndUpdate(
+            { orderId: order_id, paymentStatus: 'Pending' },
+            { paymentStatus: 'Failed', orderStatus: 'Cancelled' }
+        ).catch(e => console.error('Cancel order update error:', e));
+    }
+
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Payment Cancelled</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 40px 20px; background: #f9f9f9; }
+            .card { background: white; max-width: 420px; margin: 40px auto; padding: 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+            .icon { font-size: 48px; color: #e74c3c; margin-bottom: 16px; }
+            h2 { color: #1B3B6F; margin-bottom: 12px; }
+            p { color: #555; line-height: 1.5; font-size: 15px; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">✕</div>
+            <h2>Payment Cancelled</h2>
+            <p>You cancelled the payment. The product remains in stock.</p>
+            <p>You can close this window and return to the NISK application.</p>
+        </div>
+    </body>
+    </html>
+    `);
+});
 
 module.exports = router;

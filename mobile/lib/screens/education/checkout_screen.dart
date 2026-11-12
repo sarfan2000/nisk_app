@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:nisk_app/services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nisk_app/screens/home_screen.dart';
 
 class EducationCheckoutScreen extends StatelessWidget {
   final Map<String, dynamic> bookingDetails;
@@ -157,7 +158,14 @@ class EducationCheckoutScreen extends StatelessWidget {
          final Uri url = Uri.parse(paymentUrl);
          
          if (await canLaunchUrl(url)) {
-            await launchUrl(url, mode: LaunchMode.inAppWebView); // Opens safely without leaving app
+            await launchUrl(url, mode: LaunchMode.inAppWebView);
+            // ✅ After webview closes (payment done/cancelled) → go directly to Home
+            if (context.mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            }
          } else {
             if(context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch payment gateway.')));
          }

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const Grade = require('../models/Grade');
 const Subject = require('../models/Subject');
@@ -65,7 +65,7 @@ router.get('/teacher-rate', async (req, res) => {
 });
 
 // 5. Checkout & Booking (Server-side price verification)
-router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
+router.post('/book', auth, async (req, res) => {
     try {
         const { mode, gradeId, items, serviceCharge, discount } = req.body;
         const studentId = req.user.id;
@@ -82,7 +82,7 @@ router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
             const numClasses = Math.max(1, parseInt(item.numberOfClasses) || 1);
             let rate = Math.max(0, parseFloat(item.ratePerClass) || 0);
 
-            // ✅ FIX: Verify rate from TeacherRate (subject+grade+mode specific), 
+            // âœ… FIX: Verify rate from TeacherRate (subject+grade+mode specific), 
             //         fallback to TeacherProfile hourlyRate, then client-sent rate
             if (item.teacher) {
                 const specificRate = await TeacherRate.findOne({
@@ -121,7 +121,7 @@ router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
             student: studentId,
             bookingId,
             mode: mode || 'Online',
-            grade: gradeId,           // ✅ FIX: use gradeId as-is (ObjectId from client); never use 'Standard' string fallback
+            grade: gradeId,           // âœ… FIX: use gradeId as-is (ObjectId from client); never use 'Standard' string fallback
             items: validatedItems,
             totalSubtotal,
             serviceCharge: validServiceCharge,
@@ -131,6 +131,28 @@ router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
 
         await booking.save();
 
+        // 🔔 Send immediate booking notification to student
+        const studentNotify = new Notification({
+            user: studentId,
+            title: 'Booking Created',
+            message: `Your class booking for ${booking.bookingId} has been created. Please complete payment to confirm.`,
+            type: 'Alert'
+        });
+        await studentNotify.save().catch(e => console.error('Student notify error:', e));
+
+        // 🔔 Send notification to assigned teacher(s)
+        for (const item of validatedItems) {
+            if (item.teacher) {
+                const teacherNotify = new Notification({
+                    user: item.teacher,
+                    title: 'New Class Booking Request',
+                    message: `A student booked a class with you: ${item.subject || 'Tuition'} ().`,
+                    type: 'Alert'
+                });
+                await teacherNotify.save().catch(e => console.error('Teacher notify error:', e));
+            }
+        }
+
         res.status(201).json({ msg: 'Booking successful', booking });
     } catch (err) {
         console.error('Education book error:', err);
@@ -139,7 +161,7 @@ router.post('/book', [auth, role(['Student', 'Buyer'])], async (req, res) => {
 });
 
 // 6. Get My Bookings (Student)
-router.get('/my-bookings', [auth, role(['Student', 'Buyer'])], async (req, res) => {
+router.get('/my-bookings', auth, async (req, res) => {
     try {
         const studentId = req.user.id;
         const bookings = await Booking.find({ student: studentId })
@@ -160,8 +182,8 @@ router.get('/teacher-bookings', [auth, role(['Teacher'])], async (req, res) => {
         const teacherId = req.user.id;
         const bookings = await Booking.find({
             'items.teacher': teacherId,
-            paymentStatus: 'Completed',                                           // ✅ only paid bookings
-            status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] } // ✅ relevant statuses
+            paymentStatus: 'Completed',                                           // âœ… only paid bookings
+            status: { $in: ['Admin_Approved', 'Teacher_Approved', 'Completed'] } // âœ… relevant statuses
         })
             .populate('student', 'name email phone')
             .sort({ createdAt: -1 });
@@ -172,7 +194,7 @@ router.get('/teacher-bookings', [auth, role(['Teacher'])], async (req, res) => {
 });
 
 // 8. Update Booking Status (Teacher logic)
-// ✅ FIX: Accept BOTH bookingId string (e.g. BK123) and MongoDB _id for flexibility
+// âœ… FIX: Accept BOTH bookingId string (e.g. BK123) and MongoDB _id for flexibility
 router.patch('/bookings/:bookingId/status', [auth, role(['Teacher'])], async (req, res) => {
     try {
         const { status } = req.body;
@@ -217,7 +239,7 @@ router.patch('/bookings/:bookingId/schedule', [auth, role(['Teacher'])], async (
 
         const meetingRoomId = 'ROOM_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
-        // ✅ FIX: Accept both _id and bookingId; also set status to Teacher_Approved when scheduling
+        // âœ… FIX: Accept both _id and bookingId; also set status to Teacher_Approved when scheduling
         const param = req.params.bookingId;
         const isObjectId = /^[a-f\d]{24}$/i.test(param);
         const query = isObjectId

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/tutor_details_screen.dart';
 import 'package:nisk_app/services/api_service.dart';
 
@@ -127,12 +127,16 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
     final rate = t['hourlyRate'] ?? 1000;
     
     String? imageUrl;
-    if (t['profilePicture'] != null && t['profilePicture'].toString().isNotEmpty) {
-      String rawPath = t['profilePicture'].toString();
-      rawPath = rawPath.replaceAll('\\', '/');
-      String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
-      if (!rawPath.startsWith('/')) rawPath = '/$rawPath';
-      imageUrl = '$base$rawPath';
+    final rawPic = t['profilePicture'] ?? (t['user'] is Map ? (t['user']['profilePic'] ?? t['user']['profilePicture']) : null);
+    if (rawPic != null && rawPic.toString().isNotEmpty) {
+      String rawPath = rawPic.toString().replaceAll('\\', '/');
+      if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+        imageUrl = rawPath;
+      } else {
+        String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
+        if (!rawPath.startsWith('/')) rawPath = '/';
+        imageUrl = '';
+      }
     }
 
     return Card(
@@ -164,7 +168,8 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
                   radius: 35,
                   backgroundColor: Colors.red.shade50,
                   backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
-                  child: imageUrl == null ? const Icon(Icons.person, size: 35, color: Colors.redAccent) : null,
+                  onBackgroundImageError: imageUrl != null ? (e, s) {} : null,
+                  child: const Icon(Icons.person, size: 35, color: Colors.redAccent),
                 ),
               ),
               const SizedBox(width: 16),

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const ProductOrder = require('../models/ProductOrder');
@@ -103,9 +103,6 @@ router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req
         if (!product || product.stock < orderQty) {
             return res.status(400).json({ msg: 'Product unavailable or insufficient stock' });
         }
-
-        product.stock -= orderQty;
-        await product.save();
 
         const validDeliveryFee = Math.max(0, parseFloat(deliveryFee) || 0);
         const subtotal = product.price * orderQty;

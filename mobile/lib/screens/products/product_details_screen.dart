@@ -60,9 +60,32 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 height: 300,
                 width: double.infinity,
                 color: Colors.grey.shade100,
-                child: widget.imageUrl != null
-                    ? Image.network(widget.imageUrl!, fit: BoxFit.cover)
-                    : const Icon(Icons.image, size: 100, color: Colors.green),
+                child: widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        widget.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.green.withOpacity(0.08),
+                          child: const Center(
+                            child: Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.green),
+                          ),
+                        ),
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            color: Colors.grey.shade100,
+                            child: const Center(
+                              child: CircularProgressIndicator(color: Colors.green),
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: Colors.green.withOpacity(0.08),
+                        child: const Center(
+                          child: Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.green),
+                        ),
+                      ),
               ),
             ),
             

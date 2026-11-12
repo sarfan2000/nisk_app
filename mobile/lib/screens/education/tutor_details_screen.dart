@@ -1,3 +1,4 @@
+﻿import 'package:nisk_app/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/checkout_screen.dart';
 
@@ -22,6 +23,16 @@ class TutorDetailsScreen extends StatefulWidget {
 }
 
 class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
+  String? get resolvedImageUrl {
+    if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) return widget.imageUrl;
+    final rawPic = widget.teacher['profilePicture'] ?? (widget.teacher['user'] is Map ? widget.teacher['user']['profilePicture'] : null);
+    if (rawPic == null || rawPic.toString().isEmpty) return null;
+    String rawPath = rawPic.toString().replaceAll('\\', '/');
+    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) return rawPath;
+    String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
+    if (!rawPath.startsWith('/')) rawPath = '/';
+    return '';
+  }
   int _numberOfClasses = 1;
   String _activeTab = 'About'; // About, Info
 
@@ -131,8 +142,9 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
                     child: CircleAvatar(
                       radius: 60,
                       backgroundColor: Colors.white,
-                      backgroundImage: widget.imageUrl != null ? NetworkImage(widget.imageUrl!) : null,
-                      child: widget.imageUrl == null ? const Icon(Icons.person, size: 60, color: Colors.grey) : null,
+                      backgroundImage: resolvedImageUrl != null ? NetworkImage(resolvedImageUrl!) : null,
+                      onBackgroundImageError: resolvedImageUrl != null ? (e, s) {} : null,
+                      child: const Icon(Icons.person, size: 60, color: Colors.grey),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -153,7 +165,7 @@ class _TutorDetailsScreenState extends State<TutorDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.star, color: Colors.amber, size: 20),
-                      Text(' ${t['rating'] ?? 5.0}  •  ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(' ${t['rating'] ?? 5.0}  â€¢  ', style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text('${t['numberOfStudents'] ?? 0} Students', style: TextStyle(color: Colors.grey.shade600)),
                     ],
                   )
