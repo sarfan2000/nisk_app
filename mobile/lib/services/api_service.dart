@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 
 class ApiService {
+  static const Duration _timeout = Duration(seconds: 30);
+
   static String get baseUrl {
     return 'https://nisk-app.onrender.com/api';
   }
@@ -47,7 +49,9 @@ class ApiService {
 
   Future<dynamic> get(String endpoint) async {
     final token = await _getToken();
-    final response = await http.get(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token));
+    final response = await http
+        .get(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token))
+        .timeout(_timeout, onTimeout: () => throw Exception('Request timed out. Please try again.'));
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return json.decode(response.body);
@@ -58,7 +62,9 @@ class ApiService {
 
   Future<dynamic> post(String endpoint, Map<String, dynamic> data) async {
     final token = await _getToken();
-    final response = await http.post(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token), body: json.encode(data));
+    final response = await http
+        .post(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token), body: json.encode(data))
+        .timeout(_timeout, onTimeout: () => throw Exception('Request timed out. Please try again.'));
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return json.decode(response.body);
@@ -94,7 +100,11 @@ class ApiService {
       }
     }
 
-    final streamedResponse = await request.send();
+    // 60s timeout for file uploads (image can take a moment to send)
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => throw Exception('Upload timed out. Please check your connection and try again.'),
+    );
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -132,7 +142,11 @@ class ApiService {
       }
     }
 
-    final streamedResponse = await request.send();
+    // 60s timeout for file uploads
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => throw Exception('Upload timed out. Please check your connection and try again.'),
+    );
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -145,7 +159,9 @@ class ApiService {
 
   Future<dynamic> patch(String endpoint, Map<String, dynamic> data) async {
     final token = await _getToken();
-    final response = await http.patch(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token), body: json.encode(data));
+    final response = await http
+        .patch(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token), body: json.encode(data))
+        .timeout(_timeout, onTimeout: () => throw Exception('Request timed out. Please try again.'));
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return json.decode(response.body);
@@ -156,7 +172,9 @@ class ApiService {
 
   Future<dynamic> put(String endpoint, Map<String, dynamic> data) async {
     final token = await _getToken();
-    final response = await http.put(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token), body: json.encode(data));
+    final response = await http
+        .put(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token), body: json.encode(data))
+        .timeout(_timeout, onTimeout: () => throw Exception('Request timed out. Please try again.'));
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return json.decode(response.body);
@@ -167,7 +185,9 @@ class ApiService {
 
   Future<dynamic> delete(String endpoint) async {
     final token = await _getToken();
-    final response = await http.delete(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token));
+    final response = await http
+        .delete(Uri.parse('$baseUrl$endpoint'), headers: _buildHeaders(token))
+        .timeout(_timeout, onTimeout: () => throw Exception('Request timed out. Please try again.'));
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return json.decode(response.body);

@@ -19,7 +19,7 @@ MongoHybridStorage.prototype._handleFile = function _handleFile(req, file, cb) {
         chunks.push(chunk);
     });
 
-    file.stream.on('end', async () => {
+    file.stream.on('end', () => {
         try {
             const buffer = Buffer.concat(chunks);
             const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -31,16 +31,16 @@ MongoHybridStorage.prototype._handleFile = function _handleFile(req, file, cb) {
             const filename = `${Date.now()}-${sanitizedName}`;
             const localFilePath = path.join(uploadDir, filename);
 
-            // 1. Save to local disk cache
+            // 1. Save to local disk — synchronous, fast
             try {
                 fs.writeFileSync(localFilePath, buffer);
             } catch (fsErr) {
                 console.warn('Local disk write warning:', fsErr.message);
             }
 
-            // 2. Save permanently to MongoDB Atlas
-            try {
-                await UploadedFile.findOneAndUpdate(
+            // 2. Save to MongoDB Atlas ASYNC (fire-and-forget) — do NOT block the upload response
+            setImmediate(() => {
+                UploadedFile.findOneAndUpdate(
                     { filename },
                     {
                         filename,
@@ -48,12 +48,13 @@ MongoHybridStorage.prototype._handleFile = function _handleFile(req, file, cb) {
                         data: buffer,
                         size: buffer.length
                     },
-                    { upsert: true, new: true }
-                );
-            } catch (mongoErr) {
-                console.error('MongoDB file persistence warning:', mongoErr.message);
-            }
+                    { upsert: true, returnDocument: 'after' }
+                ).catch(mongoErr => {
+                    console.error('MongoDB file background save warning:', mongoErr.message);
+                });
+            });
 
+            // 3. Return immediately — don't wait for MongoDB
             cb(null, {
                 path: `uploads/${filename}`,
                 filename: filename,
