@@ -123,7 +123,7 @@ router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req
 
         await order.save();
 
-        res.status(201).json({ msg: 'Order placed successfully', order, paymentUrl: `/api/payment/checkout/${orderId}` });
+        res.status(201).json({ msg: 'Order placed successfully', order, orderId, paymentUrl: `/api/payment/checkout/${orderId}` });
     } catch (err) {
         console.error('Product order error:', err);
         res.status(500).json({ msg: 'Server error' });

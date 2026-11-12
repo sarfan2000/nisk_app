@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:nisk_app/services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:nisk_app/screens/home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductCheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -230,6 +231,7 @@ class _ProductCheckoutScreenState extends State<ProductCheckoutScreen> {
   }
 
   void _processPayment(BuildContext context) async {
+    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -239,7 +241,7 @@ class _ProductCheckoutScreenState extends State<ProductCheckoutScreen> {
           children: const [
             CircularProgressIndicator(color: Colors.green),
             SizedBox(height: 16),
-            Text('Redirecting to PayHere Secure Gateway...')
+            Text('Creating your order...')
           ],
         ),
       ),
@@ -257,27 +259,113 @@ class _ProductCheckoutScreenState extends State<ProductCheckoutScreen> {
       if (context.mounted) Navigator.pop(context); // Close loader
 
       if (response != null && response['paymentUrl'] != null) {
-         final String paymentUrl = '${ApiService.baseUrl.replaceAll('/api', '')}${response['paymentUrl']}';
-         final Uri url = Uri.parse(paymentUrl);
-         
-         if (await canLaunchUrl(url)) {
-           await launchUrl(url, mode: LaunchMode.inAppWebView);
-           // After webview closes go to Home
-           if (context.mounted) {
-             Navigator.of(context).pushAndRemoveUntil(
-               MaterialPageRoute(builder: (_) => const HomeScreen()),
-               (route) => false,
-             );
-           }
-         } else {
-           if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch payment portal')));
-         }
+        final String paymentUrl = '${ApiService.baseUrl.replaceAll('/api', '')}${response['paymentUrl']}';
+        final String orderId = response['orderId'] ?? '';
+        final Uri url = Uri.parse(paymentUrl);
+
+        // Save orderId to prefs so we can check status when user returns
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('pending_product_order_id', orderId);
+
+        if (await canLaunchUrl(url)) {
+          // Launch PayHere in external browser — most reliable on Flutter Web
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+
+          // After user returns from browser, show a "Check Payment Status" screen
+          // instead of blindly navigating to Home
+          if (context.mounted) {
+            _showPaymentReturnDialog(context, orderId);
+          }
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not launch payment portal. Please try again.')),
+            );
+          }
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to create order. Please try again.')),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Order failed: $e')),
+        );
       }
     }
+  }
+
+  void _showPaymentReturnDialog(BuildContext context, String orderId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.payment, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Payment', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.open_in_browser, size: 48, color: Colors.green),
+              const SizedBox(height: 12),
+              const Text(
+                'PayHere payment page was opened in your browser.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Order ID: $orderId',
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'After completing payment in the browser, tap "Done" below to check your order status.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                // Go back to product list — payment not confirmed yet
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              child: const Text('Cancel Payment', style: TextStyle(color: Colors.red)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                // Navigate to My Orders so user can see payment status
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Done — View My Orders'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
