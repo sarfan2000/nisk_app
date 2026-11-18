@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'rider_kyc_screen.dart';
 
 class DeliveryDashboard extends StatefulWidget {
   const DeliveryDashboard({super.key});
@@ -16,6 +17,8 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
   List<dynamic> _availableOrders = [];
   List<dynamic> _myDeliveries = [];
   Map<String, dynamic>? _earningsData;
+  bool _isVerified = false;
+  String _kycStatus = 'Not Submitted';
 
   String _userName = 'Rider';
 
@@ -42,12 +45,20 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
       final availableRes = await _apiService.get('/delivery/available-orders');
       final deliveriesRes = await _apiService.get('/delivery/my-deliveries');
       final earningsRes = await _apiService.get('/delivery/earnings');
+      final profileRes = await _apiService.get('/delivery/profile/me');
 
       if (mounted) {
         setState(() {
           _availableOrders = availableRes ?? [];
           _myDeliveries = deliveriesRes ?? [];
           _earningsData = earningsRes;
+
+          if (profileRes != null) {
+            final user = profileRes['user'];
+            final profile = profileRes['profile'];
+            _isVerified = user != null && user['isVerified'] == true;
+            _kycStatus = profile != null ? (profile['kycStatus'] ?? 'Pending') : 'Not Submitted';
+          }
         });
       }
     } catch (e) {
@@ -62,6 +73,45 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
   }
 
   Future<void> _acceptOrder(String orderId) async {
+    if (!_isVerified) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Row(
+            children: [
+              Icon(Icons.shield_outlined, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Verification Required'),
+            ],
+          ),
+          content: Text(
+            _kycStatus == 'Pending'
+                ? 'Your KYC documents are currently under review by NISK Admin. Once approved, you can accept deliveries.'
+                : 'You must submit your National ID and vehicle details for Admin approval before accepting delivery orders.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RiderKycScreen()),
+                ).then((_) => _fetchDashboardData());
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+              child: Text(_kycStatus == 'Pending' ? 'View KYC Status' : 'Submit KYC Now'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     try {
       await _apiService.patch('/delivery/accept/$orderId', {});
       if (mounted) {
@@ -234,6 +284,21 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
           backgroundColor: Colors.teal,
           foregroundColor: Colors.white,
           actions: [
+            TextButton.icon(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const RiderKycScreen()))
+                    .then((_) => _fetchDashboardData());
+              },
+              icon: Icon(
+                _isVerified ? Icons.verified : Icons.shield_outlined,
+                color: Colors.white,
+                size: 16,
+              ),
+              label: Text(
+                _isVerified ? 'VERIFIED' : 'KYC',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _fetchDashboardData,
@@ -266,142 +331,196 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
   }
 
   Widget _buildAvailableOrdersView() {
-    if (_availableOrders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.check_circle_outline, size: 70, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            const Text('No Orders Waiting for Delivery', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 6),
-            const Text('Check back soon when sellers pack orders.', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
-    }
-
     return RefreshIndicator(
       onRefresh: _fetchDashboardData,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.all(14),
-        itemCount: _availableOrders.length,
-        itemBuilder: (context, index) {
-          final order = _availableOrders[index];
-          final product = order['product'];
-          final seller = product != null ? product['seller'] : null;
-          final customer = order['customer'];
-
-          final pName = product != null ? product['name'] : 'Product';
-          final sellerName = seller != null ? seller['name'] : 'Seller Store';
-          final sellerPhone = seller != null ? seller['phone'] : '';
-          final sellerLocation = (seller != null && seller['location'] != null)
-              ? (seller['location']['city'] ?? seller['location']['district'] ?? 'Seller Location')
-              : (product != null && product['location'] != null ? product['location'] : 'Seller Location');
-
-          final customerName = customer != null ? customer['name'] : 'Customer';
-          final dropoffLocation = order['deliveryLocation'] ?? 'Customer Address';
-          final deliveryFee = order['deliveryFee'] ?? 300;
-
-          return Card(
-            elevation: 2,
-            margin: const EdgeInsets.only(bottom: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          pName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green.shade300),
-                        ),
-                        child: Text(
-                          'Earn LKR $deliveryFee',
-                          style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 20),
-
-                  // Pickup info
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.store, size: 18, color: Colors.orange),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Pickup: $sellerName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                            Text('$sellerLocation', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      if (sellerPhone.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.phone, size: 20, color: Colors.teal),
-                          onPressed: () => _callPhone(sellerPhone),
-                          tooltip: 'Call Seller',
-                        )
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Dropoff info
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.location_on, size: 18, color: Colors.teal),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Deliver to: $customerName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                            Text('$dropoffLocation', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _acceptOrder(order['orderId']),
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Accept Delivery Job', style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ),
-                ],
+        children: [
+          _buildKycWarningBanner(),
+          if (_availableOrders.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 70, color: Colors.grey.shade400),
+                    const SizedBox(height: 12),
+                    const Text('No Orders Waiting for Delivery', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    const Text('Check back soon when sellers pack orders.', style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
               ),
+            )
+          else
+            ..._availableOrders.map((order) {
+              final product = order['product'];
+              final seller = product != null ? product['seller'] : null;
+              final customer = order['customer'];
+
+              final pName = product != null ? product['name'] : 'Product';
+              final sellerName = seller != null ? seller['name'] : 'Seller Store';
+              final sellerPhone = seller != null ? seller['phone'] : '';
+              final sellerLocation = (seller != null && seller['location'] != null)
+                  ? (seller['location']['city'] ?? seller['location']['district'] ?? 'Seller Location')
+                  : (product != null && product['location'] != null ? product['location'] : 'Seller Location');
+
+              final customerName = customer != null ? customer['name'] : 'Customer';
+              final dropoffLocation = order['deliveryLocation'] ?? 'Customer Address';
+              final deliveryFee = order['deliveryFee'] ?? 300;
+
+              return Card(
+                elevation: 2,
+                margin: const EdgeInsets.only(bottom: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              pName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green.shade300),
+                            ),
+                            child: Text(
+                              'Earn LKR $deliveryFee',
+                              style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+
+                      // Pickup info
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.store, size: 18, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Pickup: $sellerName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text('$sellerLocation', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          if (sellerPhone != null && sellerPhone.toString().isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.phone, size: 20, color: Colors.teal),
+                              onPressed: () => _callPhone(sellerPhone),
+                              tooltip: 'Call Seller',
+                            )
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Dropoff info
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.location_on, size: 18, color: Colors.teal),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Deliver to: $customerName', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text('$dropoffLocation', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _acceptOrder(order['orderId']),
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: const Text('Accept Delivery Job', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKycWarningBanner() {
+    if (_isVerified) return const SizedBox.shrink();
+
+    final isPending = _kycStatus == 'Pending';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isPending ? Colors.amber.shade50 : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isPending ? Colors.amber.shade300 : Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(isPending ? Icons.hourglass_top : Icons.warning_amber_rounded, color: isPending ? Colors.amber.shade900 : Colors.red, size: 22),
+              const SizedBox(width: 8),
+              Text(
+                isPending ? 'KYC Verification Pending Review' : 'Verification Required to Deliver',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isPending ? Colors.amber.shade900 : Colors.red.shade900),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isPending
+                ? 'Your National ID & vehicle details were submitted. Admin review is in progress.'
+                : 'Submit your National ID & vehicle details to get approved by Admin and start accepting delivery orders.',
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
+          ),
+          const SizedBox(height: 10),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const RiderKycScreen()))
+                  .then((_) => _fetchDashboardData());
+            },
+            icon: const Icon(Icons.badge, size: 16),
+            label: Text(isPending ? 'View KYC Status' : 'Submit KYC Documents'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isPending ? Colors.amber.shade800 : Colors.teal,
+              foregroundColor: Colors.white,
+              visualDensity: VisualDensity.compact,
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

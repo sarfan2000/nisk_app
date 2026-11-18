@@ -57,9 +57,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             const Text('Management Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.assignment_turned_in, color: Colors.green),
-              title: const Text('Manpower Payment Approvals'),
-              subtitle: const Text('Approve payments to notify workers'),
+              leading: const Icon(Icons.verified_user, color: Colors.teal),
+              title: const Text('Approvals Center (Rider KYC & Manpower)', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Verify delivery riders & approve payments'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminApprovalsScreen()));

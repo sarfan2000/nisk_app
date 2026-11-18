@@ -5,6 +5,7 @@ const Booking = require('../models/Booking');
 const Job = require('../models/Job');
 const Product = require('../models/Product');
 const ProductOrder = require('../models/ProductOrder');
+const DeliveryProfile = require('../models/DeliveryProfile');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 
@@ -50,6 +51,66 @@ router.get('/teachers/unverified', [auth, role(['Admin', 'Super Admin'])], async
         res.json(teachers);
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// Get Pending Rider KYC Submissions
+router.get('/delivery/pending-kyc', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
+    try {
+        const profiles = await DeliveryProfile.find({ kycStatus: 'Pending' })
+            .populate('user', 'name phone email location isVerified createdAt')
+            .sort({ createdAt: -1 });
+        res.json(profiles);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// Admin Approve or Reject Rider KYC
+router.patch('/delivery/kyc-decision/:profileId', [auth, role(['Admin', 'Super Admin'])], async (req, res) => {
+    try {
+        const { decision, rejectionReason } = req.body; // 'Approved' or 'Rejected'
+
+        if (!['Approved', 'Rejected'].includes(decision)) {
+            return res.status(400).json({ msg: 'Invalid decision. Must be Approved or Rejected' });
+        }
+
+        const isApproved = decision === 'Approved';
+        const profile = await DeliveryProfile.findById(req.params.profileId).populate('user');
+
+        if (!profile) {
+            return res.status(404).json({ msg: 'Delivery Profile not found' });
+        }
+
+        profile.kycStatus = decision;
+        profile.rejectionReason = isApproved ? '' : (rejectionReason || 'Documents could not be verified');
+        if (isApproved) profile.approvedAt = new Date();
+        await profile.save();
+
+        // Update the User document's isVerified flag
+        if (profile.user) {
+            await User.findByIdAndUpdate(profile.user._id, {
+                isVerified: isApproved
+            });
+
+            // Send in-app notification to the rider
+            const Notification = require('../models/Notification');
+            const notif = new Notification({
+                user: profile.user._id,
+                title: isApproved ? 'Rider Account Verified!' : 'KYC Verification Update',
+                message: isApproved
+                    ? 'Congratulations! Your NISK Rider KYC has been approved. You can now accept and deliver orders!'
+                    : `Your Rider KYC was not approved: ${profile.rejectionReason}. Please update your documents.`,
+                type: 'Alert'
+            });
+            await notif.save();
+        }
+
+        res.json({ msg: `Rider KYC has been ${decision.toLowerCase()}!`, profile });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server error: ' + err.message });
     }
 });
 

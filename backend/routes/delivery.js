@@ -2,8 +2,95 @@ const express = require('express');
 const router = express.Router();
 const ProductOrder = require('../models/ProductOrder');
 const Notification = require('../models/Notification');
+const DeliveryProfile = require('../models/DeliveryProfile');
+const User = require('../models/User');
+const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
+
+// 0. Get My Delivery Profile & KYC Status
+router.get('/profile/me', [auth, role(['Delivery'])], async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('name phone email location isVerified profilePic');
+        const profile = await DeliveryProfile.findOne({ user: req.user.id });
+        res.json({ user, profile });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server Error' });
+    }
+});
+
+// 0b. Submit / Update Rider KYC Documents & Details
+router.post('/profile/kyc', [auth, role(['Delivery']), upload.array('images', 2)], async (req, res) => {
+    try {
+        const {
+            nicNumber,
+            drivingLicenseNumber,
+            vehicleType,
+            vehicleNumber,
+            bankName,
+            branch,
+            accountNumber,
+            accountHolderName
+        } = req.body;
+
+        if (!nicNumber || !vehicleNumber || !bankName || !accountNumber || !accountHolderName) {
+            return res.status(400).json({ msg: 'Please provide all required fields: NIC, Vehicle Number, and Bank Account Details' });
+        }
+
+        let nicPhoto = '';
+        let licensePhoto = '';
+
+        if (req.files && req.files.length > 0) {
+            nicPhoto = req.files[0].path;
+            if (req.files.length > 1) {
+                licensePhoto = req.files[1].path;
+            }
+        }
+
+        const profileData = {
+            user: req.user.id,
+            nicNumber: nicNumber.trim(),
+            drivingLicenseNumber: (drivingLicenseNumber || '').trim(),
+            vehicleType: vehicleType || 'Motorbike',
+            vehicleNumber: vehicleNumber.trim().toUpperCase(),
+            bankDetails: {
+                bankName: bankName.trim(),
+                branch: (branch || 'Main Branch').trim(),
+                accountNumber: accountNumber.trim(),
+                accountHolderName: accountHolderName.trim()
+            },
+            kycStatus: 'Pending',
+            rejectionReason: ''
+        };
+
+        if (nicPhoto) profileData.nicPhoto = nicPhoto;
+        if (licensePhoto) profileData.licensePhoto = licensePhoto;
+
+        const profile = await DeliveryProfile.findOneAndUpdate(
+            { user: req.user.id },
+            { $set: profileData },
+            { new: true, upsert: true }
+        );
+
+        // Notify Admin of new KYC submission
+        const admins = await User.find({ userType: 'Admin' });
+        if (admins.length > 0) {
+            const adminNotifs = admins.map(admin => ({
+                user: admin._id,
+                title: 'New Rider KYC Submitted',
+                message: `Delivery rider '${req.user.name || 'User'}' (${vehicleType} - ${vehicleNumber}) submitted KYC documents for approval.`,
+                type: 'Alert'
+            }));
+            await Notification.insertMany(adminNotifs);
+        }
+
+        res.json({ msg: 'KYC documents submitted successfully! Admin will review and verify your account.', profile });
+    } catch (err) {
+        console.error('KYC submission error:', err);
+        res.status(500).json({ msg: 'Server Error: ' + err.message });
+    }
+});
 
 // 1. Get Unassigned Orders ready for pickup
 // Only paid/confirmed orders that are ready should be available to drivers
@@ -56,6 +143,14 @@ router.get('/my-deliveries', [auth, role(['Delivery'])], async (req, res) => {
 // 3. Accept an Order for Delivery
 router.patch('/accept/:orderId', [auth, role(['Delivery'])], async (req, res) => {
     try {
+        // Enforce: Rider MUST be verified by Admin before accepting delivery jobs
+        const user = await User.findById(req.user.id);
+        if (!user || !user.isVerified) {
+            return res.status(403).json({
+                msg: 'Account verification required! Please submit your KYC documents and wait for Admin approval before accepting delivery orders.'
+            });
+        }
+
         const order = await ProductOrder.findOne({
             orderId: req.params.orderId,
             $or: [
