@@ -473,3 +473,4 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
     );
   }
 }
+
