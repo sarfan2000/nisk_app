@@ -108,6 +108,7 @@ router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req
         const subtotal = product.price * orderQty;
         const total = subtotal + validDeliveryFee;
         const orderId = 'PR' + Date.now() + Math.random().toString().slice(2, 6);
+        const deliveryOtp = Math.floor(1000 + Math.random() * 9000).toString();
 
         const order = new ProductOrder({
             orderId,
@@ -118,7 +119,8 @@ router.post('/order', [auth, role(['Buyer', 'Student', 'Employer'])], async (req
             unitPrice: product.price,
             subtotal,
             deliveryFee: validDeliveryFee,
-            total
+            total,
+            deliveryOtp
         });
 
         await order.save();

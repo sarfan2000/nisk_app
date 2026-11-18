@@ -164,6 +164,42 @@ class _MyProductOrdersScreenState extends State<MyProductOrdersScreen> {
                                   ],
                                 ),
                               ),
+                              if (order['deliveryOtp'] != null && orderStatus != 'Delivered' && orderStatus != 'Completed') ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.teal.shade200),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('Delivery Security OTP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.teal)),
+                                          const SizedBox(height: 2),
+                                          Text('Share this code with rider on delivery', style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                                        ],
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.teal,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          order['deliveryOtp'].toString(),
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 2),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 12),
                               Text('Placed on: $date', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                             ],
