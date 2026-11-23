@@ -15,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _darkThemeEnabled = false;
-  String _language = 'English';
+  String _selectedLanguage = 'en'; // Store locale code (en, si, ta)
 
   @override
   void initState() {
@@ -29,8 +29,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _darkThemeEnabled = prefs.getBool('isDarkMode') ?? false;
         _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-        _language = prefs.getString('language') ?? 'English';
+        _selectedLanguage = prefs.getString('app_locale') ?? context.locale.languageCode;
       });
+    }
+  }
+
+  String _getLanguageDisplayName(String localeCode) {
+    switch (localeCode) {
+      case 'si':
+        return 'සිංහල (Sinhala)';
+      case 'ta':
+        return 'தமிழ் (Tamil)';
+      case 'en':
+      default:
+        return 'English';
     }
   }
 
@@ -45,27 +57,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     globalThemeMode.value = val ? ThemeMode.dark : ThemeMode.light;
   }
 
-  Future<void> _changeLanguage(String lang) async {
+  Future<void> _changeLanguage(String localeCode) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', lang);
+    await prefs.setString('app_locale', localeCode);
+    
     if (mounted) {
       setState(() {
-        _language = lang;
+        _selectedLanguage = localeCode;
       });
-    }
 
-    if (!mounted) return;
-    if (lang == 'Sinhala (à·ƒà·’à¶‚à·„à¶½)') {
-      await context.setLocale(const Locale('si'));
-    } else if (lang == 'Tamil (à®¤à®®à®¿à®´à¯)') {
-      await context.setLocale(const Locale('ta'));
-    } else {
-      await context.setLocale(const Locale('en'));
-    }
-
-    if (mounted) Navigator.pop(context);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Language updated to $lang')));
+      // Change the app locale
+      await context.setLocale(Locale(localeCode));
+      
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Language changed to ${_getLanguageDisplayName(localeCode)}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        )
+      );
     }
   }
 
@@ -84,7 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          _buildSectionHeader('Profile Administration'),
+          _buildSectionHeader('Profile Administration', isDark),
           _buildListTile(
             title: 'Personal Information',
             subtitle: 'Update your name, email, and location',
@@ -95,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           
           const SizedBox(height: 24),
-          _buildSectionHeader('Preferences'),
+          _buildSectionHeader('Preferences', isDark),
           _buildSwitchTile(
             title: 'Push Notifications',
             subtitle: 'Get alerts for messages, bookings and orders',
@@ -118,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Icon(Icons.language, color: Colors.blue.shade700),
               ),
               title: const Text('Language', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(_language, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              subtitle: Text(_getLanguageDisplayName(_selectedLanguage), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
               onTap: () {
                 _showLanguagePicker();
@@ -134,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           const SizedBox(height: 24),
-          _buildSectionHeader('Support & Feedback'),
+          _buildSectionHeader('Support & Feedback', isDark),
           _buildListTile(
             title: 'Suggestion Box',
             subtitle: 'Share your ideas to improve the platform',
@@ -150,13 +161,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, left: 4),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
-          color: Color(0xFF1B3B6F),
+        style: TextStyle(
+          color: isDark ? Colors.grey.shade300 : const Color(0xFF1B3B6F),
           fontWeight: FontWeight.bold,
           fontSize: 13,
           letterSpacing: 1.2,
@@ -213,13 +224,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('Select Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Select Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
               ),
-              _buildLangOption('English'),
-              _buildLangOption('Sinhala (à·ƒà·’à¶‚à·„à¶½)'),
-              _buildLangOption('Tamil (à®¤à®®à®¿à®´à¯)'),
+              _buildLangOption('en', 'English', '🇬🇧'),
+              _buildLangOption('si', 'සිංහල (Sinhala)', '🇱🇰'),
+              _buildLangOption('ta', 'தமிழ் (Tamil)', '🇱🇰'),
               const SizedBox(height: 16),
             ],
           ),
@@ -228,12 +251,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildLangOption(String langName) {
-    bool isSelected = _language == langName;
+  Widget _buildLangOption(String localeCode, String langName, String flag) {
+    bool isSelected = _selectedLanguage == localeCode;
     return ListTile(
+      leading: Text(flag, style: const TextStyle(fontSize: 32)),
       title: Text(langName, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
-      onTap: () => _changeLanguage(langName),
+      trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.green, size: 28) : null,
+      tileColor: isSelected ? Colors.green.withValues(alpha: 0.1) : null,
+      onTap: () => _changeLanguage(localeCode),
     );
   }
 }

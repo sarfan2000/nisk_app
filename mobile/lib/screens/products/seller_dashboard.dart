@@ -160,13 +160,20 @@ class _SellerDashboardState extends State<SellerDashboard> {
                   itemCount: _myProducts.length,
                   itemBuilder: (context, index) {
                     final product = _myProducts[index];
+                    String shopName = product['shopName'] ?? '';
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         leading: const Icon(Icons.inventory, color: Color(0xFFF57224)),
                         title: Text(product['name'] ?? 'Product', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${product['category'] ?? ''} - LKR ${product['price'] ?? 0}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (shopName.isNotEmpty) Text('Shop: $shopName', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.w600)),
+                            Text('${product['category'] ?? ''} - LKR ${product['price'] ?? 0}'),
+                          ],
+                        ),
                         trailing: ElevatedButton(
                           onPressed: () {
                             Navigator.push(context, MaterialPageRoute(builder: (context) => AddProductScreen(existingData: product))).then((_) => _fetchSellerOrders());

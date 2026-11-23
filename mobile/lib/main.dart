@@ -69,6 +69,12 @@ class _NiskAppState extends State<NiskApp> {
     final isDark = prefs.getBool('isDarkMode') ?? false;
     globalThemeMode.value = isDark ? ThemeMode.dark : ThemeMode.light;
     
+    // Load saved language
+    final savedLocale = prefs.getString('app_locale');
+    if (savedLocale != null && mounted) {
+      await context.setLocale(Locale(savedLocale));
+    }
+    
     setState(() {
       _isLoggedIn = token != null && token.isNotEmpty;
       _isLoading = false;

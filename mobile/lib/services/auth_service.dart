@@ -62,6 +62,9 @@ class AuthService {
     await prefs.remove('roles');
     await prefs.remove('activeRole');
     await prefs.remove('userId');
+    await prefs.remove('userName');
+    await prefs.remove('userEmail');
+    await prefs.remove('profilePic');
   }
 
   Future<List<dynamic>> addRole(String roleName) async {
@@ -99,5 +102,106 @@ class AuthService {
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('x-auth-token');
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    String? email,
+    String? location,
+  }) async {
+    try {
+      final token = await getToken();
+      final response = await http.put(
+        Uri.parse('$baseUrl/update-profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token ?? '',
+        },
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'location': location,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        // Update local storage
+        final prefs = await SharedPreferences.getInstance();
+        if (data['user'] != null) {
+          if (data['user']['name'] != null) {
+            await prefs.setString('userName', data['user']['name']);
+          }
+          if (data['user']['email'] != null) {
+            await prefs.setString('userEmail', data['user']['email']);
+          }
+        }
+        
+        return data;
+      } else {
+        throw Exception(jsonDecode(response.body)['msg'] ?? 'Failed to update profile');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getToken();
+      final response = await http.put(
+        Uri.parse('$baseUrl/change-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token ?? '',
+        },
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(jsonDecode(response.body)['msg'] ?? 'Failed to change password');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  Future<String> uploadProfilePicture(String imagePath) async {
+    try {
+      final token = await getToken();
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/upload-profile-pic'),
+      );
+      
+      request.headers['x-auth-token'] = token ?? '';
+      request.files.add(await http.MultipartFile.fromPath('images', imagePath));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        // Update local storage
+        final prefs = await SharedPreferences.getInstance();
+        if (data['profilePic'] != null) {
+          await prefs.setString('profilePic', data['profilePic']);
+        }
+        
+        return data['profilePic'] ?? '';
+      } else {
+        throw Exception(jsonDecode(response.body)['msg'] ?? 'Failed to upload profile picture');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 }

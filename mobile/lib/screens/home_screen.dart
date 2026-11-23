@@ -387,6 +387,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   final roleObj = _userRoles[index];
                   final roleName = roleObj['role'];
                   final bool isActive = _activeRole == roleName;
+                  final navigator = Navigator.of(context);
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
 
                   return ListTile(
                     leading: Icon(
@@ -398,11 +400,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () async {
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('activeRole', roleName);
+                      if (!mounted) return;
                       setState(() {
                         _activeRole = roleName;
                       });
-                      if (mounted) Navigator.pop(context); // close drawer
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Switched to $roleName Mode')));
+                      navigator.pop(); // close drawer
+                      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Switched to $roleName Mode')));
                     },
                   );
                 },
@@ -431,6 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAddRoleModal(BuildContext context) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final allPossibleRoles = ['Buyer', 'Seller', 'Worker', 'Employer', 'Teacher', 'Student', 'Delivery'];
     final existingRoleNames = _userRoles.map((r) => r['role'].toString()).toList();
     final missingRoles = allPossibleRoles.where((r) => !existingRoleNames.contains(r)).toList();
@@ -454,16 +458,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.pop(context); // Close dialog
                       try {
                         final updatedRoles = await AuthService().addRole(missingRoles[index]);
+                        if (!mounted) return;
                         setState(() {
                            _userRoles = updatedRoles;
                         });
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${missingRoles[index]} role successfully added!')));
-                        }
+                        scaffoldMessenger.showSnackBar(SnackBar(content: Text('${missingRoles[index]} role successfully added!')));
                       } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}')));
-                        }
+                        if (!mounted) return;
+                        scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}')));
                       }
                     },
                   );

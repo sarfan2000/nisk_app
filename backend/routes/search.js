@@ -62,9 +62,10 @@ router.get('/', async (req, res) => {
                 $or: [
                     { name: searchString },
                     { category: searchString },
-                    { description: searchString }
+                    { description: searchString },
+                    { shopName: searchString }
                 ]
-            }).select('name price stock category images seller');
+            }).select('name price stock category images seller shopName');
         }
 
         res.json(results);

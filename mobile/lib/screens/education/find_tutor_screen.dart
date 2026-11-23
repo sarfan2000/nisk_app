@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:nisk_app/screens/education/tutor_details_screen.dart';
 import 'package:nisk_app/services/api_service.dart';
+import 'package:nisk_app/screens/messages/messages_screen.dart';
 
 class FindTutorScreen extends StatefulWidget {
   const FindTutorScreen({super.key});
@@ -124,6 +125,7 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
   Widget _buildTeacherCard(Map<String, dynamic> t) {
     final user = t['user'] ?? {};
     final name = user['name'] ?? 'Professional Tutor';
+    final teacherId = user['_id'];  // Get teacher's user ID for messaging
     final rate = t['hourlyRate'] ?? 1000;
     
     String? imageUrl;
@@ -134,8 +136,8 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
         imageUrl = rawPath;
       } else {
         String base = ApiService.baseUrl.replaceAll(RegExp(r'/api$'), '');
-        if (!rawPath.startsWith('/')) rawPath = '/';
-        imageUrl = '';
+        if (!rawPath.startsWith('/')) rawPath = '/$rawPath';
+        imageUrl = '$base$rawPath';
       }
     }
 
@@ -211,7 +213,28 @@ class _FindTutorScreenState extends State<FindTutorScreen> {
                       Text(' ${t['rating'] ?? 5.0}', style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+                  // Message Teacher Button
+                  if (teacherId != null)
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatDetailScreen(
+                              contactId: teacherId,
+                              contactName: name,
+                              contactProfilePic: imageUrl,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.message_outlined),
+                      color: Colors.blueAccent,
+                      tooltip: 'Message Teacher',
+                      iconSize: 22,
+                    ),
+                  const SizedBox(height: 8),
                   const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.redAccent),
                 ],
               )

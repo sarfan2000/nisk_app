@@ -132,10 +132,28 @@ router.put('/update-profile', auth, async (req, res) => {
 
         if (name) user.name = name;
         if (email) user.email = email;
-        if (location) user.location = location;
+        
+        // Handle location - can be string or object
+        if (location) {
+            if (typeof location === 'string') {
+                // If location is a string, store it in city field
+                if (!user.location) user.location = {};
+                user.location.city = location;
+            } else if (typeof location === 'object') {
+                // If location is an object, merge with existing
+                user.location = { ...user.location, ...location };
+            }
+        }
 
         await user.save();
-        res.json({ msg: 'Profile updated successfully', user: { name: user.name, email: user.email, location: user.location } });
+        res.json({ 
+            msg: 'Profile updated successfully', 
+            user: { 
+                name: user.name, 
+                email: user.email, 
+                location: user.location?.city || user.location 
+            } 
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');

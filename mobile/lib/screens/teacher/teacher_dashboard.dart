@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../education/live_class_screen.dart';
+import '../messages/messages_screen.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -183,12 +184,52 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         itemBuilder: (context, index) {
                           final b = _bookings[index];
                           final studentName = b['student'] != null ? b['student']['name'] : 'Unknown Student';
+                          final studentId = b['student'] != null ? b['student']['_id'] : null;
+                          final studentPhone = b['student'] != null ? (b['student']['phone'] ?? '') : '';
                           final grade = b['grade'] != null ? (b['grade'] is Map ? (b['grade']['name'] ?? b['grade']['gradeName'] ?? 'N/A') : b['grade']) : 'N/A';
                           final status = b['status'] ?? 'Pending';
                           final String title = b['bookingId'] ?? 'BK-Unknown';
-                          final String details = 'Student: $studentName ($grade)';
+                          final mode = b['mode'] ?? 'Online';
                           
-                          return _buildBookingCard(title, details, status, b['arrangedStartTime'], b['meetingRoomId']);
+                          // Extract schedule and subject information from items
+                          String scheduleInfo = '';
+                          String subjectInfo = '';
+                          int totalClasses = 0;
+                          
+                          if (b['items'] != null && (b['items'] as List).isNotEmpty) {
+                            final items = b['items'] as List;
+                            List<String> subjects = [];
+                            List<String> schedules = [];
+                            
+                            for (var item in items) {
+                              if (item['subject'] != null) {
+                                subjects.add(item['subject'].toString());
+                              }
+                              if (item['schedule'] != null && item['schedule'].toString().isNotEmpty) {
+                                schedules.add(item['schedule'].toString());
+                              }
+                              totalClasses += (item['numberOfClasses'] as num?)?.toInt() ?? 0;
+                            }
+                            
+                            subjectInfo = subjects.isNotEmpty ? subjects.join(', ') : 'General Tuition';
+                            scheduleInfo = schedules.isNotEmpty ? schedules.join(' | ') : 'Flexible Schedule';
+                          }
+                          
+                          final String details = 'Student: $studentName ($grade)${studentPhone.isNotEmpty ? '\nPhone: $studentPhone' : ''}';
+                          
+                          return _buildBookingCard(
+                            title, 
+                            details, 
+                            status, 
+                            b['arrangedStartTime'], 
+                            b['meetingRoomId'],
+                            studentId: studentId,
+                            studentName: studentName,
+                            studentSchedule: scheduleInfo,
+                            subject: subjectInfo,
+                            mode: mode,
+                            totalClasses: totalClasses,
+                          );
                         },
                       ),
           ],
@@ -212,76 +253,269 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildBookingCard(String title, String details, String status, String? startTime, String? meetingRoomId, {String studentSchedule = ''}) {
+  Widget _buildBookingCard(
+    String title, 
+    String details, 
+    String status, 
+    String? startTime, 
+    String? meetingRoomId, 
+    {
+      String? studentId,
+      String studentName = 'Student',
+      String studentSchedule = '',
+      String subject = '',
+      String mode = 'Online',
+      int totalClasses = 0,
+    }
+  ) {
+    const textColor = Color(0xFF263247);
+    const mutedSurface = Color(0xFFF2F4F8);
+    const borderColor = Color(0xFFE1E5EC);
+    const actionColor = Color(0xFF315EE7);
     bool isActionable = (status == 'Pending' || status == 'Admin_Approved');
     String displayStatus = status == 'Admin_Approved' ? 'Paid - Action Required' : status;
     String buttonText = isActionable ? 'Accept Class' : (startTime == null ? 'Schedule Class' : 'Complete Class');
-    Color buttonColor = isActionable ? Colors.green : (startTime == null ? Colors.purple : (status == 'Completed' ? Colors.grey : Colors.blue));
 
     return Card(
-      elevation: 2,
+      color: Colors.white,
+      elevation: 1,
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Column(
-             crossAxisAlignment: CrossAxisAlignment.start,
-             children: [
-               Text(details, style: const TextStyle(fontWeight: FontWeight.w500)),
-               if (studentSchedule.isNotEmpty) ...[
-                 const SizedBox(height: 4),
-                 Row(
-                   children: [
-                     const Icon(Icons.access_time_filled, size: 14, color: Colors.deepOrangeAccent),
-                     const SizedBox(width: 4),
-                     Text('Booked Time: $studentSchedule', style: const TextStyle(color: Colors.deepOrangeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
-                   ],
-                 ),
-               ],
-               if (startTime != null) ...[
-                 const SizedBox(height: 4),
-                 Text('Scheduled: ${DateTime.parse(startTime).toLocal().toString().substring(0, 16)}', style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),
-               ],
-               const SizedBox(height: 4),
-               Row(
-                 children: [
-                    Icon(isActionable ? Icons.pending : Icons.check_circle, size: 16, color: isActionable ? Colors.orange : Colors.green),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text('Status: $displayStatus', style: TextStyle(color: isActionable ? Colors.orange : Colors.green, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis, maxLines: 1),
-                    ),
-                 ]
-               )
-             ],
-           ),
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: borderColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (startTime != null && status != 'Completed')
-              ElevatedButton(
-                 onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => 
-                      LiveClassScreen(channelName: meetingRoomId ?? 'demo')
-                    ));
-                 },
-                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, minimumSize: const Size(100, 32)),
-                 child: const Text('Join Live'),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title, 
+                    style: const TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: mutedSurface,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(mode == 'Online' ? Icons.videocam : Icons.location_on, size: 14, color: textColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        mode,
+                        style: const TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Subject Information
+            if (subject.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.menu_book_outlined, size: 18, color: textColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      subject,
+                      style: const TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (totalClasses > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: mutedSurface,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$totalClasses ${totalClasses == 1 ? 'class' : 'classes'}',
+                        style: const TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                ],
               ),
-            if (startTime == null || status == 'Completed')
-              ElevatedButton(
-                 onPressed: status == 'Completed' ? null : (isActionable ? () => _updateBookingStatus(title, status) : () => _scheduleClass(title)),
-                 style: ElevatedButton.styleFrom(
-                   backgroundColor: buttonColor,
-                   foregroundColor: Colors.white,
-                 ),
-                 child: Text(buttonText),
+            ],
+            
+            const SizedBox(height: 12),
+            Text(
+              details,
+              style: const TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                height: 1.5,
               ),
+            ),
+            
+            if (studentSchedule.isNotEmpty && studentSchedule != 'Flexible Schedule') ...[
+              const SizedBox(height: 12),
+              _buildBookingTimeRow(
+                icon: Icons.schedule,
+                label: 'Requested time',
+                value: studentSchedule,
+                textColor: textColor,
+                backgroundColor: mutedSurface,
+              ),
+            ],
+            
+            if (startTime != null) ...[
+              const SizedBox(height: 8),
+              _buildBookingTimeRow(
+                icon: Icons.event_available,
+                label: 'Scheduled time',
+                value: DateTime.parse(startTime).toLocal().toString().substring(0, 16),
+                textColor: textColor,
+                backgroundColor: mutedSurface,
+              ),
+            ],
+            
+            const SizedBox(height: 12),
+            
+            Row(
+              children: [
+                const Icon(Icons.info_outline, size: 16, color: textColor),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Status: $displayStatus',
+                    style: const TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            Row(
+              children: [
+                if (studentId != null)
+                  Expanded(
+                    flex: 3,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatDetailScreen(
+                              contactId: studentId,
+                              contactName: studentName,
+                              contactProfilePic: null,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.message_outlined, size: 16),
+                      label: const Text('Message', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: actionColor,
+                        side: const BorderSide(color: actionColor),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                if (studentId != null) const SizedBox(width: 10),
+                
+                Expanded(
+                  flex: studentId == null ? 1 : 7,
+                  child: ElevatedButton.icon(
+                    onPressed: startTime != null && status != 'Completed'
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LiveClassScreen(
+                                  channelName: meetingRoomId ?? 'demo',
+                                ),
+                              ),
+                            );
+                          }
+                        : status == 'Completed'
+                            ? null
+                            : isActionable
+                                ? () => _updateBookingStatus(title, status)
+                                : () => _scheduleClass(title),
+                    icon: Icon(
+                      startTime != null && status != 'Completed'
+                          ? Icons.video_call
+                          : isActionable
+                              ? Icons.check
+                              : (startTime == null ? Icons.schedule : Icons.done_all),
+                      size: 18,
+                    ),
+                    label: Text(
+                      startTime != null && status != 'Completed' ? 'Join Live' : buttonText,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: actionColor,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: mutedSurface,
+                      disabledForegroundColor: textColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
-}
 
+  Widget _buildBookingTimeRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color textColor,
+    required Color backgroundColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: textColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(value, style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -137,11 +137,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            _buildProfileOption(context, Icons.settings, 'Account Settings', () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+            _buildProfileOption(context, Icons.settings, 'Account Settings', () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+              // Reload profile data when returning from settings
+              _loadProfileData();
             }),
-            _buildProfileOption(context, Icons.security, 'Privacy & Security', () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivacySecurityScreen()));
+            _buildProfileOption(context, Icons.security, 'Privacy & Security', () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (context) => const PrivacySecurityScreen()));
+              // Reload profile data when returning
+              _loadProfileData();
             }),
             const Divider(height: 40),
             ListTile(

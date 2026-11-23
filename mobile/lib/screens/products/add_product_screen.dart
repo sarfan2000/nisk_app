@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,6 +13,7 @@ class AddProductScreen extends StatefulWidget {
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
+  final _shopNameController = TextEditingController();
   final _nameController = TextEditingController();
   final _categoryController = TextEditingController();
   final _descController = TextEditingController();
@@ -38,6 +38,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   void _loadData(Map<String, dynamic> data) {
     _existingId = data['_id'];
+    _shopNameController.text = data['shopName'] ?? '';
     _nameController.text = data['name'] ?? '';
     _categoryController.text = data['category'] ?? '';
     _descController.text = data['description'] ?? '';
@@ -75,6 +76,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     try {
       final Map<String, String> fields = {
+        'shopName': _shopNameController.text.trim(),
         'name': _nameController.text,
         'category': _categoryController.text.isEmpty ? 'General' : _categoryController.text,
         'description': _descController.text,
@@ -234,6 +236,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+              TextFormField(
+                controller: _shopNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Shop/Business Name (Optional)',
+                  hintText: 'e.g., Fresh Mart, Tech Hub',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.store, color: Colors.green),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController, 
                 decoration: const InputDecoration(label: const Text.rich(TextSpan(text: 'Product Name ', children: [TextSpan(text: '*', style: TextStyle(color: Colors.red))])), border: OutlineInputBorder()),

@@ -37,6 +37,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     String name = widget.product['name'] ?? 'Product Name';
+    String shopName = widget.product['shopName'] ?? '';
     String description = widget.product['description'] ?? 'No description available for this product. High quality materials, fast shipping.';
     double price = double.tryParse(widget.product['price'].toString()) ?? 0;
     int stock = widget.product['stock'] ?? 0;
@@ -95,6 +96,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (shopName.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.store, size: 16, color: Colors.green),
+                        const SizedBox(width: 4),
+                        Text(
+                          shopName,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

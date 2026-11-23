@@ -82,12 +82,57 @@ router.patch('/verify/:productId', [auth, role(['Admin', 'Super Admin'])], async
     }
 });
 
-// 2. Browse Products (Customer)
+// 2. Browse Products (Customer) with Enhanced Search
 router.get('/', async (req, res) => {
     try {
-        const products = await Product.find({ stock: { $gt: 0 } }).populate('seller', 'name location');
+        const { search, vendor, category } = req.query;
+        
+        // Build search query
+        let searchQuery = { stock: { $gt: 0 } };
+        
+        // If search query provided
+        if (search && search.trim()) {
+            const searchRegex = { $regex: search.trim(), $options: 'i' };
+            
+            // If vendor filter is also provided (Combined Search)
+            if (vendor && vendor.trim()) {
+                const vendorRegex = { $regex: vendor.trim(), $options: 'i' };
+                searchQuery.$and = [
+                    {
+                        $or: [
+                            { name: searchRegex },
+                            { description: searchRegex },
+                            { category: searchRegex }
+                        ]
+                    },
+                    { shopName: vendorRegex }
+                ];
+            } else {
+                // Product Search only - search across product fields
+                searchQuery.$or = [
+                    { name: searchRegex },
+                    { description: searchRegex },
+                    { category: searchRegex }
+                ];
+            }
+        } 
+        // If only vendor search (no product search)
+        else if (vendor && vendor.trim()) {
+            searchQuery.shopName = { $regex: vendor.trim(), $options: 'i' };
+        }
+        
+        // Add category filter if provided
+        if (category && category.trim() && category !== 'all') {
+            searchQuery.category = category;
+        }
+        
+        const products = await Product.find(searchQuery)
+            .populate('seller', 'name location phone')
+            .sort({ createdAt: -1 });
+        
         res.json(products);
     } catch (err) {
+        console.error('Product search error:', err);
         res.status(500).json({ msg: 'Server error' });
     }
 });

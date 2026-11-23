@@ -28,6 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _name = prefs.getString('userName') ?? '';
         _email = prefs.getString('userEmail') ?? '';
+        _location = prefs.getString('userLocation') ?? '';
       });
     }
   }
@@ -47,8 +48,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       final prefs = await SharedPreferences.getInstance();
       if (response != null && response['user'] != null) {
-        prefs.setString('userName', response['user']['name'] ?? '');
-        prefs.setString('userEmail', response['user']['email'] ?? '');
+        await prefs.setString('userName', response['user']['name'] ?? '');
+        await prefs.setString('userEmail', response['user']['email'] ?? '');
+        if (response['user']['location'] != null) {
+          await prefs.setString('userLocation', response['user']['location']);
+        }
       }
       
       if (!mounted) return;
@@ -90,6 +94,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                initialValue: _location,
                 decoration: const InputDecoration(labelText: 'City / Location (Optional)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.location_on)),
                 onSaved: (v) => _location = v ?? '',
               ),
@@ -215,6 +220,27 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
   bool _twoFactor = false;
   bool _hidePhone = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadPrivacySettings();
+  }
+
+  Future<void> _loadPrivacySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _twoFactor = prefs.getBool('twoFactorEnabled') ?? false;
+        _hidePhone = prefs.getBool('hidePhoneNumber') ?? true;
+      });
+    }
+  }
+
+  Future<void> _savePrivacySetting(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
+
   Widget _buildCardTile({required String title, required String subtitle, required IconData icon, required VoidCallback onTap}) {
     return Card(
       elevation: 0,
@@ -294,9 +320,17 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
             subtitle: 'Add an extra layer of security',
             icon: Icons.security_outlined,
             value: _twoFactor,
-            onChanged: (val) {
+            onChanged: (val) async {
               setState(() => _twoFactor = val);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('2FA is currently in development.')));
+              await _savePrivacySetting('twoFactorEnabled', val);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val ? '2FA enabled (in development)' : '2FA disabled'),
+                    backgroundColor: val ? Colors.green : Colors.orange,
+                  )
+                );
+              }
             },
           ),
           _buildSwitchCardTile(
@@ -304,8 +338,17 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
             subtitle: 'Keep phone number private from public profiles',
             icon: Icons.visibility_off_outlined,
             value: _hidePhone,
-            onChanged: (val) {
+            onChanged: (val) async {
               setState(() => _hidePhone = val);
+              await _savePrivacySetting('hidePhoneNumber', val);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val ? 'Phone number is now hidden' : 'Phone number is now visible'),
+                    backgroundColor: Colors.green,
+                  )
+                );
+              }
             },
           ),
           _buildCardTile(
